@@ -21,5 +21,5 @@ A minimalist ESL classroom helper for running the "Impostor Game" on a shared de
 ## Editing the word bank
 
 - Open `data.js` and edit the `BANK` constant.
-- Each property is a category name mapped to an array of words.
-- Keep at least 10 categories with 10+ classroom-friendly words each so rounds stay fresh.
+- The structure is `language -> CEFR level -> category -> words`.
+- Add or remove categories per level while keeping classroom-friendly words for each language (English, Catalan, French by default).
