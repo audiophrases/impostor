@@ -170,6 +170,8 @@ function renderReveal() {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = player;
+    button.className = 'player-name' + (state.revealed[index] ? ' revealed' : '');
+    button.disabled = state.revealed[index];
     button.addEventListener('click', () => openModal(index));
 
     const status = document.createElement('span');
