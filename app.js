@@ -1,5 +1,7 @@
 import { BANK } from './data.js';
 
+const LEVEL_ORDER = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+
 const STORAGE_KEY = 'impostor-game-state-v1';
 
 const setupScreen = document.getElementById('setupScreen');
@@ -40,6 +42,31 @@ let state = {
 let currentPlayerIndex = null;
 let hideTimer = null;
 
+function availableLevelsForLanguage(language) {
+  const levelMap = BANK[language] || {};
+  const levels = Object.keys(levelMap);
+  return LEVEL_ORDER.filter((level) => levels.includes(level));
+}
+
+function populateLevelOptions(language, desiredLevel) {
+  const levels = availableLevelsForLanguage(language);
+  levelSelect.innerHTML = '';
+
+  if (!levels.length) {
+    return;
+  }
+
+  levels.forEach((level) => {
+    const option = document.createElement('option');
+    option.value = level;
+    option.textContent = level;
+    levelSelect.appendChild(option);
+  });
+
+  const selectedLevel = levels.includes(desiredLevel) ? desiredLevel : levels[0];
+  levelSelect.value = selectedLevel;
+}
+
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
@@ -50,11 +77,14 @@ function loadState() {
   try {
     const parsed = JSON.parse(stored);
     if (parsed && Array.isArray(parsed.players)) {
-      state = { ...state, ...parsed };
+      const language = parsed.language || state.language;
+      const level = parsed.level || state.level;
+      state = { ...state, ...parsed, language, level };
+      populateLevelOptions(language, level);
       impostorInput.value = state.impostorCount || 1;
       playerInput.value = state.players.join('\n');
-      languageSelect.value = state.language || 'en';
-      levelSelect.value = state.level || 'A1';
+      languageSelect.value = language;
+      levelSelect.value = level;
       renderReveal();
       switchScreen('reveal');
     }
@@ -270,7 +300,7 @@ function hardReset() {
   playerInput.value = '';
   impostorInput.value = 1;
   languageSelect.value = 'en';
-  levelSelect.value = 'A1';
+  populateLevelOptions('en', 'A1');
   switchScreen('setup');
   renderReveal();
 }
@@ -279,7 +309,7 @@ function populateSetup() {
   playerInput.value = state.players.join('\n');
   impostorInput.value = state.impostorCount;
   languageSelect.value = state.language;
-  levelSelect.value = state.level;
+  populateLevelOptions(state.language, state.level);
   setupError.textContent = '';
 }
 
@@ -299,6 +329,10 @@ editPlayersBtn.addEventListener('click', () => {
   closeModal();
   populateSetup();
   switchScreen('setup');
+});
+
+languageSelect.addEventListener('change', () => {
+  populateLevelOptions(languageSelect.value, levelSelect.value);
 });
 
 hardResetBtn.addEventListener('click', () => {
@@ -323,4 +357,5 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+populateLevelOptions(state.language, state.level);
 loadState();

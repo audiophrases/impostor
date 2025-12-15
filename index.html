@@ -20,27 +20,26 @@
         <textarea id="playerInput" rows="6" placeholder="Sam\nMina\nAlex"></textarea>
       </label>
 
-      <div class="field double-field">
-        <label class="field">
-          <span class="field-label">Language</span>
-          <select id="languageSelect">
-            <option value="en">English</option>
-            <option value="ca">Catalan</option>
-            <option value="fr">French</option>
-          </select>
-        </label>
+      <div class="field-group">
+        <div class="field-heading">
+          <span class="field-label">Word bank</span>
+          <span class="hint">Let students pick the language and CEFR level before starting.</span>
+        </div>
+        <div class="double-field">
+          <label class="field">
+            <span class="field-label">Language</span>
+            <select id="languageSelect">
+              <option value="en">English</option>
+              <option value="ca">Catalan</option>
+              <option value="fr">French</option>
+            </select>
+          </label>
 
-        <label class="field">
-          <span class="field-label">Level (CEFR)</span>
-          <select id="levelSelect">
-            <option value="A1">A1</option>
-            <option value="A2">A2</option>
-            <option value="B1">B1</option>
-            <option value="B2">B2</option>
-            <option value="C1">C1</option>
-            <option value="C2">C2</option>
-          </select>
-        </label>
+          <label class="field">
+            <span class="field-label">Level (CEFR)</span>
+            <select id="levelSelect"></select>
+          </label>
+        </div>
       </div>
 
       <label class="field number-field">

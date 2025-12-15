@@ -56,6 +56,26 @@ body {
   margin-bottom: 16px;
 }
 
+.field-group {
+  margin-bottom: 16px;
+}
+
+.field-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.field-heading .field-label {
+  margin-bottom: 0;
+}
+
+.field-heading .hint {
+  font-size: 0.95rem;
+}
+
 .field-label {
   display: block;
   font-weight: 600;
