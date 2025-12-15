@@ -151,6 +151,10 @@ button.wide {
   display: none;
 }
 
+.modal.hidden {
+  display: none;
+}
+
 .reveal-header {
   display: flex;
   flex-wrap: wrap;
