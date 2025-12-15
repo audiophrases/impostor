@@ -6,10 +6,14 @@ const setupScreen = document.getElementById('setupScreen');
 const revealScreen = document.getElementById('revealScreen');
 const playerInput = document.getElementById('playerInput');
 const impostorInput = document.getElementById('impostorInput');
+const languageSelect = document.getElementById('languageSelect');
+const levelSelect = document.getElementById('levelSelect');
 const startGameBtn = document.getElementById('startGame');
 const resetGameBtn = document.getElementById('resetGame');
 const setupError = document.getElementById('setupError');
 const categoryDisplay = document.getElementById('categoryDisplay');
+const languageDisplay = document.getElementById('languageDisplay');
+const levelDisplay = document.getElementById('levelDisplay');
 const playersList = document.getElementById('playersList');
 const newRoundBtn = document.getElementById('newRound');
 const editPlayersBtn = document.getElementById('editPlayers');
@@ -29,6 +33,8 @@ let state = {
   category: '',
   word: '',
   revealed: [],
+  language: 'en',
+  level: 'A1',
 };
 
 let currentPlayerIndex = null;
@@ -47,6 +53,8 @@ function loadState() {
       state = { ...state, ...parsed };
       impostorInput.value = state.impostorCount || 1;
       playerInput.value = state.players.join('\n');
+      languageSelect.value = state.language || 'en';
+      levelSelect.value = state.level || 'A1';
       renderReveal();
       switchScreen('reveal');
     }
@@ -83,9 +91,14 @@ function parseNames(raw) {
 }
 
 function randomCategoryAndWord() {
-  const categories = Object.keys(BANK);
+  const levelBank = BANK[state.language]?.[state.level];
+  if (!levelBank) {
+    throw new Error('No bank found for selected language and level');
+  }
+
+  const categories = Object.keys(levelBank);
   const category = categories[Math.floor(Math.random() * categories.length)];
-  const words = BANK[category];
+  const words = levelBank[category];
   const word = words[Math.floor(Math.random() * words.length)];
   return { category, word };
 }
@@ -102,6 +115,8 @@ function pickImpostors(count, total) {
 function startGame() {
   const players = parseNames(playerInput.value);
   const impostorCount = Number(impostorInput.value);
+  const language = languageSelect.value;
+  const level = levelSelect.value;
 
   if (players.length < 3) {
     setupError.textContent = 'Please enter at least 3 players.';
@@ -113,6 +128,15 @@ function startGame() {
     return;
   }
 
+  const levelBank = BANK[language]?.[level];
+  if (!levelBank) {
+    setupError.textContent = 'No words available for that language and level.';
+    return;
+  }
+
+  state.language = language;
+  state.level = level;
+
   const { category, word } = randomCategoryAndWord();
   const impostorIndexes = pickImpostors(impostorCount, players.length);
 
@@ -123,6 +147,8 @@ function startGame() {
     category,
     word,
     revealed: new Array(players.length).fill(false),
+    language,
+    level,
   };
 
   setupError.textContent = '';
@@ -133,6 +159,8 @@ function startGame() {
 
 function renderReveal() {
   categoryDisplay.textContent = state.category || 'Not started yet';
+  languageDisplay.textContent = state.language.toUpperCase();
+  levelDisplay.textContent = state.level;
   playersList.innerHTML = '';
 
   state.players.forEach((player, index) => {
@@ -234,9 +262,13 @@ function hardReset() {
     category: '',
     word: '',
     revealed: [],
+    language: 'en',
+    level: 'A1',
   };
   playerInput.value = '';
   impostorInput.value = 1;
+  languageSelect.value = 'en';
+  levelSelect.value = 'A1';
   switchScreen('setup');
   renderReveal();
 }
@@ -244,6 +276,8 @@ function hardReset() {
 function populateSetup() {
   playerInput.value = state.players.join('\n');
   impostorInput.value = state.impostorCount;
+  languageSelect.value = state.language;
+  levelSelect.value = state.level;
   setupError.textContent = '';
 }
 
