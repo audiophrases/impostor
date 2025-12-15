@@ -1,1 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Impostor Game</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="app-header">
+      <h1>Impostor Game</h1>
+      <p class="tagline">Minimal ESL classroom reveal tool</p>
+    </header>
 
+    <section id="setupScreen" class="card">
+      <h2>Setup</h2>
+      <label class="field">
+        <span class="field-label">Player names (one per line)</span>
+        <textarea id="playerInput" rows="6" placeholder="Sam\nMina\nAlex"></textarea>
+      </label>
+
+      <label class="field number-field">
+        <div class="field-heading">
+          <span class="field-label">Number of impostors</span>
+          <span class="hint">At least 1 and less than players</span>
+        </div>
+        <input id="impostorInput" type="number" min="1" value="1" />
+      </label>
+
+      <div class="actions">
+        <button id="startGame" class="primary">Start game</button>
+        <button id="resetGame" type="button" class="ghost">Reset</button>
+      </div>
+      <p id="setupError" class="error" aria-live="polite"></p>
+    </section>
+
+    <section id="revealScreen" class="card hidden">
+      <div class="reveal-header">
+        <div>
+          <p class="label">Category</p>
+          <p id="categoryDisplay" class="category"></p>
+        </div>
+        <div class="controls">
+          <button id="newRound" class="primary">New round</button>
+          <button id="editPlayers" type="button" class="ghost">Edit players</button>
+          <button id="hardReset" type="button" class="danger">Hard reset</button>
+        </div>
+      </div>
+
+      <div id="playersList" class="players"></div>
+    </section>
+  </main>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-content">
+      <p id="modalPrompt" class="modal-subtitle"></p>
+      <h3 id="modalTitle"></h3>
+      <div id="modalBody" class="modal-body">
+        <button id="revealButton" class="primary wide">Reveal</button>
+      </div>
+      <div class="modal-actions">
+        <button id="hideButton" type="button" class="ghost">Hide</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="data.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
