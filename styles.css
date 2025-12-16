@@ -208,6 +208,16 @@ button.wide {
   flex-wrap: wrap;
 }
 
+.impostor-reveal {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #fecdd3;
+  background: #fef2f2;
+  border-radius: var(--radius);
+  color: var(--danger);
+  font-weight: 700;
+}
+
 .meta-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));

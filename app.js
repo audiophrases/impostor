@@ -20,6 +20,7 @@ const playersList = document.getElementById('playersList');
 const newRoundBtn = document.getElementById('newRound');
 const editPlayersBtn = document.getElementById('editPlayers');
 const hardResetBtn = document.getElementById('hardReset');
+const showImpostorsBtn = document.getElementById('showImpostors');
 
 const modal = document.getElementById('modal');
 const modalPrompt = document.getElementById('modalPrompt');
@@ -28,6 +29,7 @@ const modalBody = document.getElementById('modalBody');
 const revealButton = document.getElementById('revealButton');
 const hideButton = document.getElementById('hideButton');
 const startPlayerDisplay = document.getElementById('startPlayerDisplay');
+const impostorReveal = document.getElementById('impostorReveal');
 
 let state = {
   players: [],
@@ -43,6 +45,15 @@ let state = {
 
 let currentPlayerIndex = null;
 let hideTimer = null;
+
+function allPlayersRevealed() {
+  return state.revealed.length > 0 && state.revealed.every(Boolean);
+}
+
+function clearImpostorReveal() {
+  impostorReveal.textContent = '';
+  impostorReveal.classList.add('hidden');
+}
 
 function availableLevelsForLanguage(language) {
   const levelMap = BANK[language] || {};
@@ -231,6 +242,13 @@ function renderReveal() {
     card.appendChild(status);
     playersList.appendChild(card);
   });
+
+  const everyoneRevealed = allPlayersRevealed();
+  showImpostorsBtn.disabled = !everyoneRevealed;
+
+  if (!everyoneRevealed) {
+    clearImpostorReveal();
+  }
 }
 
 function openModal(index) {
@@ -287,6 +305,23 @@ function showResult() {
   hideTimer = setTimeout(() => {
     showRevealPrompt();
   }, 10000);
+}
+
+function revealImpostorsToGroup() {
+  if (!state.players.length || !allPlayersRevealed()) return;
+
+  const confirmed = window.confirm(
+    'Are you sure you want to see who the impostor(s) are? This will reveal them to everyone.'
+  );
+
+  if (!confirmed) return;
+
+  const impostorNames = state.impostorIndexes.map((index) => state.players[index]);
+  const label = impostorNames.length > 1 ? 'Impostors' : 'Impostor';
+  const message = `${label}: ${impostorNames.join(', ')}`;
+
+  impostorReveal.textContent = message;
+  impostorReveal.classList.remove('hidden');
 }
 
 function newRound() {
@@ -366,6 +401,8 @@ revealButton.addEventListener('click', showResult);
 hideButton.addEventListener('click', () => {
   showRevealPrompt();
 });
+
+showImpostorsBtn.addEventListener('click', revealImpostorsToGroup);
 
 modal.addEventListener('click', (e) => {
   if (e.target === modal) {
