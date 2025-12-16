@@ -72,6 +72,18 @@ export const BANK = {
         "listen",
         "sit",
         "stand"
+      ],
+      "Famous cities": [
+        "Paris",
+        "London",
+        "New York",
+        "Tokyo",
+        "Sydney",
+        "Cairo",
+        "Toronto",
+        "Berlin",
+        "Madrid",
+        "Rome"
       ]
     },
     A2: {
@@ -146,6 +158,18 @@ export const BANK = {
         "taxi",
         "seatbelt",
         "platform"
+      ],
+      "Popular brands": [
+        "Nike",
+        "Adidas",
+        "IKEA",
+        "Apple",
+        "Samsung",
+        "Toyota",
+        "Lego",
+        "Sony",
+        "Zara",
+        "Pepsi"
       ]
     },
     B1: {
@@ -220,6 +244,18 @@ export const BANK = {
         "price tag",
         "checkout",
         "gift wrap"
+      ],
+      "Family movies and shows": [
+        "Frozen",
+        "Toy Story",
+        "Finding Nemo",
+        "Coco",
+        "The Lion King",
+        "Moana",
+        "Up",
+        "Harry Potter",
+        "Spider-Man",
+        "Jurassic Park"
       ]
     },
     B2: {
@@ -294,6 +330,18 @@ export const BANK = {
         "family reunion",
         "seasonal market",
         "craft fair"
+      ],
+      "Streaming hits": [
+        "Stranger Things",
+        "The Crown",
+        "Money Heist",
+        "The Mandalorian",
+        "Breaking Bad",
+        "The Office",
+        "Better Call Saul",
+        "Bridgerton",
+        "Game of Thrones",
+        "The Last of Us"
       ]
     },
     C1: {
@@ -356,6 +404,18 @@ export const BANK = {
         "supply chain",
         "cash flow",
         "innovation hub"
+      ],
+      "Award-winning films": [
+        "Parasite",
+        "Nomadland",
+        "La La Land",
+        "Moonlight",
+        "The Shape of Water",
+        "Spotlight",
+        "Birdman",
+        "Argo",
+        "12 Years a Slave",
+        "The Artist"
       ],
       Emotions: [
         "nostalgia",
@@ -442,6 +502,18 @@ export const BANK = {
         "oceanography",
         "materials science",
         "ethnomusicology"
+      ],
+      "Classic screen titles": [
+        "Citizen Kane",
+        "Casablanca",
+        "Rashomon",
+        "Metropolis",
+        "Seven Samurai",
+        "Blade Runner",
+        "Spirited Away",
+        "Pan's Labyrinth",
+        "Schindler's List",
+        "A Clockwork Orange"
       ]
     }
   },

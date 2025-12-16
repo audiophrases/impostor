@@ -215,6 +215,16 @@ button.wide {
   align-items: flex-start;
 }
 
+.start-player-panel {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: #f1f5f9;
+}
+
 .players {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -231,6 +241,10 @@ button.wide {
   justify-content: space-between;
   align-items: center;
   min-height: 64px;
+}
+.player-card.starter {
+  border-color: var(--accent);
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .player-name {
@@ -255,6 +269,10 @@ button.wide {
   color: var(--muted);
   cursor: not-allowed;
   box-shadow: none;
+}
+
+.player-name.starter {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
 }
 
 .player-name:disabled {

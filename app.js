@@ -27,6 +27,7 @@ const modalTitle = document.getElementById('modalTitle');
 const modalBody = document.getElementById('modalBody');
 const revealButton = document.getElementById('revealButton');
 const hideButton = document.getElementById('hideButton');
+const startPlayerDisplay = document.getElementById('startPlayerDisplay');
 
 let state = {
   players: [],
@@ -37,6 +38,7 @@ let state = {
   revealed: [],
   language: 'en',
   level: 'A1',
+  startPlayerIndex: null,
 };
 
 let currentPlayerIndex = null;
@@ -142,6 +144,11 @@ function pickImpostors(count, total) {
   return indexes.slice(0, count);
 }
 
+function pickStartingPlayer(total) {
+  if (total <= 0) return null;
+  return Math.floor(Math.random() * total);
+}
+
 function startGame() {
   const players = parseNames(playerInput.value);
   const impostorCount = Number(impostorInput.value);
@@ -169,6 +176,7 @@ function startGame() {
 
   const { category, word } = randomCategoryAndWord();
   const impostorIndexes = pickImpostors(impostorCount, players.length);
+  const startPlayerIndex = pickStartingPlayer(players.length);
 
   state = {
     players,
@@ -179,6 +187,7 @@ function startGame() {
     revealed: new Array(players.length).fill(false),
     language,
     level,
+    startPlayerIndex,
   };
 
   setupError.textContent = '';
@@ -191,22 +200,32 @@ function renderReveal() {
   categoryDisplay.textContent = state.category || 'Not started yet';
   languageDisplay.textContent = state.language.toUpperCase();
   levelDisplay.textContent = state.level;
+  const startingPlayer =
+    typeof state.startPlayerIndex === 'number' && state.players[state.startPlayerIndex]
+      ? state.players[state.startPlayerIndex]
+      : 'No player selected yet';
+  startPlayerDisplay.textContent = startingPlayer;
   playersList.innerHTML = '';
 
   state.players.forEach((player, index) => {
     const card = document.createElement('div');
-    card.className = 'player-card';
+    const isStarter = state.startPlayerIndex === index;
+    card.className = 'player-card' + (isStarter ? ' starter' : '');
 
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = player;
-    button.className = 'player-name' + (state.revealed[index] ? ' revealed' : '');
+    button.className =
+      'player-name' +
+      (state.revealed[index] ? ' revealed' : '') +
+      (isStarter ? ' starter' : '');
     button.disabled = state.revealed[index];
     button.addEventListener('click', () => openModal(index));
 
     const status = document.createElement('span');
     status.className = 'status' + (state.revealed[index] ? ' checked' : '');
-    status.textContent = state.revealed[index] ? '✓ Revealed' : 'Waiting';
+    const starterLabel = isStarter ? ' • Starts' : '';
+    status.textContent = state.revealed[index] ? `✓ Revealed${starterLabel}` : `Waiting${starterLabel}`;
 
     card.appendChild(button);
     card.appendChild(status);
@@ -274,11 +293,13 @@ function newRound() {
   if (!state.players.length) return;
   const { category, word } = randomCategoryAndWord();
   const impostorIndexes = pickImpostors(state.impostorCount, state.players.length);
+  const startPlayerIndex = pickStartingPlayer(state.players.length);
   state = {
     ...state,
     category,
     word,
     impostorIndexes,
+    startPlayerIndex,
     revealed: new Array(state.players.length).fill(false),
   };
   saveState();
@@ -296,6 +317,7 @@ function hardReset() {
     revealed: [],
     language: 'en',
     level: 'A1',
+    startPlayerIndex: null,
   };
   playerInput.value = '';
   impostorInput.value = 1;
