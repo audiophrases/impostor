@@ -1,21 +1,24 @@
-import { BANK } from './data.js';
+import { fetchWordBank } from './data.js';
 
 const LEVEL_ORDER = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
-const STORAGE_KEY = 'impostor-game-state-v1';
+const STORAGE_KEY = 'impostor-game-state-v2';
 
 const setupScreen = document.getElementById('setupScreen');
 const revealScreen = document.getElementById('revealScreen');
 const playerInput = document.getElementById('playerInput');
 const impostorInput = document.getElementById('impostorInput');
 const languageSelect = document.getElementById('languageSelect');
-const levelSelect = document.getElementById('levelSelect');
+const levelCheckboxes = document.getElementById('levelCheckboxes');
+const categoryCheckboxes = document.getElementById('categoryCheckboxes');
+const wordSourceStatus = document.getElementById('wordSourceStatus');
 const startGameBtn = document.getElementById('startGame');
 const resetGameBtn = document.getElementById('resetGame');
 const setupError = document.getElementById('setupError');
 const categoryDisplay = document.getElementById('categoryDisplay');
 const languageDisplay = document.getElementById('languageDisplay');
 const levelDisplay = document.getElementById('levelDisplay');
+const categoryFiltersDisplay = document.getElementById('categoryFiltersDisplay');
 const playersList = document.getElementById('playersList');
 const newRoundBtn = document.getElementById('newRound');
 const editPlayersBtn = document.getElementById('editPlayers');
@@ -39,12 +42,16 @@ let state = {
   word: '',
   revealed: [],
   language: 'en',
-  level: 'A1',
+  selectedLevels: [],
+  selectedCategories: [],
   startPlayerIndex: null,
 };
 
+let latestBank = {};
+let bankPromise = null;
 let currentPlayerIndex = null;
 let hideTimer = null;
+let shouldResumeReveal = false;
 
 function allPlayersRevealed() {
   return state.revealed.length > 0 && state.revealed.every(Boolean);
@@ -55,29 +62,115 @@ function clearImpostorReveal() {
   impostorReveal.classList.add('hidden');
 }
 
-function availableLevelsForLanguage(language) {
-  const levelMap = BANK[language] || {};
-  const levels = Object.keys(levelMap);
-  return LEVEL_ORDER.filter((level) => levels.includes(level));
+function normalizeLanguage(language) {
+  return (language || '').trim();
 }
 
-function populateLevelOptions(language, desiredLevel) {
-  const levels = availableLevelsForLanguage(language);
-  levelSelect.innerHTML = '';
+function availableLevelsForLanguage(language) {
+  const normalized = normalizeLanguage(language);
+  const levelMap = latestBank[normalized] || {};
+  const levels = Object.keys(levelMap);
+  const ordered = LEVEL_ORDER.filter((level) => levels.includes(level));
+  const leftovers = levels.filter((level) => !ordered.includes(level)).sort();
+  return [...ordered, ...leftovers];
+}
 
-  if (!levels.length) {
-    return;
-  }
-
+function availableCategories(language, levels) {
+  const normalized = normalizeLanguage(language);
+  const categories = new Set();
   levels.forEach((level) => {
+    const levelBank = latestBank[normalized]?.[level];
+    if (!levelBank) return;
+    Object.keys(levelBank).forEach((category) => categories.add(category));
+  });
+  return Array.from(categories).sort();
+}
+
+function renderLanguageOptions(selectedLanguage) {
+  languageSelect.innerHTML = '';
+  const languages = Object.keys(latestBank);
+  languages.sort((a, b) => a.localeCompare(b));
+
+  languages.forEach((lang) => {
     const option = document.createElement('option');
-    option.value = level;
-    option.textContent = level;
-    levelSelect.appendChild(option);
+    option.value = lang;
+    option.textContent = lang;
+    languageSelect.appendChild(option);
   });
 
-  const selectedLevel = levels.includes(desiredLevel) ? desiredLevel : levels[0];
-  levelSelect.value = selectedLevel;
+  const desired = languages.includes(selectedLanguage) ? selectedLanguage : languages[0];
+  languageSelect.value = desired;
+}
+
+function renderLevelCheckboxes(language, preferredLevels = []) {
+  const levels = availableLevelsForLanguage(language);
+  levelCheckboxes.innerHTML = '';
+
+  if (!levels.length) return [];
+
+  const selection = preferredLevels.length
+    ? preferredLevels.filter((level) => levels.includes(level))
+    : levels;
+
+  levels.forEach((level) => {
+    const id = `level-${level}`;
+    const wrapper = document.createElement('label');
+    wrapper.className = 'pill-option';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = level;
+    input.id = id;
+    input.checked = selection.includes(level);
+    input.className = 'hidden-input';
+    const badge = document.createElement('span');
+    badge.className = 'pill-badge';
+    badge.textContent = level;
+    wrapper.appendChild(input);
+    wrapper.appendChild(badge);
+    levelCheckboxes.appendChild(wrapper);
+  });
+
+  return selection;
+}
+
+function renderCategoryCheckboxes(language, levels, preferredCategories = []) {
+  const categories = availableCategories(language, levels);
+  categoryCheckboxes.innerHTML = '';
+  if (!categories.length) return [];
+
+  const selection = preferredCategories.length
+    ? preferredCategories.filter((category) => categories.includes(category))
+    : categories;
+
+  categories.forEach((category) => {
+    const id = `category-${category}`;
+    const wrapper = document.createElement('label');
+    wrapper.className = 'pill-option';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = category;
+    input.id = id;
+    input.checked = selection.includes(category);
+    input.className = 'hidden-input';
+    const badge = document.createElement('span');
+    badge.className = 'pill-badge';
+    badge.textContent = category;
+    wrapper.appendChild(input);
+    wrapper.appendChild(badge);
+    categoryCheckboxes.appendChild(wrapper);
+  });
+
+  return selection;
+}
+
+function describeSelection(values) {
+  if (!values.length) return 'None selected';
+  return values.join(', ');
+}
+
+function updateFilterSummaries() {
+  levelDisplay.textContent = describeSelection(state.selectedLevels);
+  categoryFiltersDisplay.textContent = describeSelection(state.selectedCategories);
 }
 
 function saveState() {
@@ -90,16 +183,17 @@ function loadState() {
   try {
     const parsed = JSON.parse(stored);
     if (parsed && Array.isArray(parsed.players)) {
-      const language = parsed.language || state.language;
-      const level = parsed.level || state.level;
-      state = { ...state, ...parsed, language, level };
-      populateLevelOptions(language, level);
+      state = {
+        ...state,
+        ...parsed,
+        language: parsed.language || state.language,
+        selectedLevels: parsed.selectedLevels || [],
+        selectedCategories: parsed.selectedCategories || [],
+      };
+
       impostorInput.value = state.impostorCount || 1;
       playerInput.value = state.players.join('\n');
-      languageSelect.value = language;
-      levelSelect.value = level;
-      renderReveal();
-      switchScreen('reveal');
+      shouldResumeReveal = state.players.length > 0;
     }
   } catch (err) {
     console.warn('Could not load saved game', err);
@@ -133,17 +227,35 @@ function parseNames(raw) {
   });
 }
 
+function buildWordPool() {
+  const languageBank = latestBank[normalizeLanguage(state.language)];
+  if (!languageBank) return [];
+
+  const pool = [];
+
+  state.selectedLevels.forEach((level) => {
+    const levelBank = languageBank[level];
+    if (!levelBank) return;
+
+    state.selectedCategories.forEach((category) => {
+      const words = levelBank[category];
+      if (!words || !words.length) return;
+      words.forEach((word) => {
+        pool.push({ category, word });
+      });
+    });
+  });
+
+  return pool;
+}
+
 function randomCategoryAndWord() {
-  const levelBank = BANK[state.language]?.[state.level];
-  if (!levelBank) {
-    throw new Error('No bank found for selected language and level');
+  const pool = buildWordPool();
+  if (!pool.length) {
+    throw new Error('No words available for the selected filters.');
   }
 
-  const categories = Object.keys(levelBank);
-  const category = categories[Math.floor(Math.random() * categories.length)];
-  const words = levelBank[category];
-  const word = words[Math.floor(Math.random() * words.length)];
-  return { category, word };
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 function pickImpostors(count, total) {
@@ -160,11 +272,26 @@ function pickStartingPlayer(total) {
   return Math.floor(Math.random() * total);
 }
 
-function startGame() {
+async function startGame() {
   const players = parseNames(playerInput.value);
   const impostorCount = Number(impostorInput.value);
   const language = languageSelect.value;
-  const level = levelSelect.value;
+
+  try {
+    await refreshWordBank();
+  } catch (err) {
+    setupError.textContent = err.message;
+    return;
+  }
+
+  const selectedLevels = Array.from(levelCheckboxes.querySelectorAll('input[type="checkbox"]'))
+    .filter((input) => input.checked)
+    .map((input) => input.value)
+    .filter((level) => availableLevelsForLanguage(language).includes(level));
+  const selectedCategories = Array.from(categoryCheckboxes.querySelectorAll('input[type="checkbox"]'))
+    .filter((input) => input.checked)
+    .map((input) => input.value)
+    .filter((category) => availableCategories(language, selectedLevels).includes(category));
 
   if (players.length < 3) {
     setupError.textContent = 'Please enter at least 3 players.';
@@ -176,14 +303,25 @@ function startGame() {
     return;
   }
 
-  const levelBank = BANK[language]?.[level];
-  if (!levelBank) {
-    setupError.textContent = 'No words available for that language and level.';
+  if (!selectedLevels.length) {
+    setupError.textContent = 'Choose at least one level.';
+    return;
+  }
+
+  if (!selectedCategories.length) {
+    setupError.textContent = 'Choose at least one category.';
     return;
   }
 
   state.language = language;
-  state.level = level;
+  state.selectedLevels = selectedLevels;
+  state.selectedCategories = selectedCategories;
+
+  const pool = buildWordPool();
+  if (!pool.length) {
+    setupError.textContent = 'No words available for that language, level, and category combination.';
+    return;
+  }
 
   const { category, word } = randomCategoryAndWord();
   const impostorIndexes = pickImpostors(impostorCount, players.length);
@@ -197,7 +335,8 @@ function startGame() {
     word,
     revealed: new Array(players.length).fill(false),
     language,
-    level,
+    selectedLevels,
+    selectedCategories,
     startPlayerIndex,
   };
 
@@ -210,7 +349,8 @@ function startGame() {
 function renderReveal() {
   categoryDisplay.textContent = state.category || 'Not started yet';
   languageDisplay.textContent = state.language.toUpperCase();
-  levelDisplay.textContent = state.level;
+  levelDisplay.textContent = describeSelection(state.selectedLevels);
+  categoryFiltersDisplay.textContent = describeSelection(state.selectedCategories);
   const startingPlayer =
     typeof state.startPlayerIndex === 'number' && state.players[state.startPlayerIndex]
       ? state.players[state.startPlayerIndex]
@@ -326,7 +466,14 @@ function revealImpostorsToGroup() {
 
 function newRound() {
   if (!state.players.length) return;
-  const { category, word } = randomCategoryAndWord();
+  let selection;
+  try {
+    selection = randomCategoryAndWord();
+  } catch (err) {
+    setupError.textContent = err.message;
+    return;
+  }
+  const { category, word } = selection;
   const impostorIndexes = pickImpostors(state.impostorCount, state.players.length);
   const startPlayerIndex = pickStartingPlayer(state.players.length);
   state = {
@@ -351,13 +498,19 @@ function hardReset() {
     word: '',
     revealed: [],
     language: 'en',
-    level: 'A1',
+    selectedLevels: [],
+    selectedCategories: [],
     startPlayerIndex: null,
   };
   playerInput.value = '';
   impostorInput.value = 1;
-  languageSelect.value = 'en';
-  populateLevelOptions('en', 'A1');
+  const languages = Object.keys(latestBank);
+  const defaultLanguage = languages.includes('en') ? 'en' : languages[0] || 'en';
+  languageSelect.value = defaultLanguage;
+  state.language = defaultLanguage;
+  state.selectedLevels = renderLevelCheckboxes(defaultLanguage, LEVEL_ORDER);
+  state.selectedCategories = renderCategoryCheckboxes(defaultLanguage, state.selectedLevels);
+  updateFilterSummaries();
   switchScreen('setup');
   renderReveal();
 }
@@ -366,20 +519,69 @@ function populateSetup() {
   playerInput.value = state.players.join('\n');
   impostorInput.value = state.impostorCount;
   languageSelect.value = state.language;
-  populateLevelOptions(state.language, state.level);
+  state.selectedLevels = renderLevelCheckboxes(state.language, state.selectedLevels);
+  state.selectedCategories = renderCategoryCheckboxes(state.language, state.selectedLevels, state.selectedCategories);
+  updateFilterSummaries();
   setupError.textContent = '';
 }
 
-startGameBtn.addEventListener('click', startGame);
+async function refreshWordBank() {
+  if (bankPromise) return bankPromise;
+  wordSourceStatus.textContent = 'Loading latest words...';
+  bankPromise = fetchWordBank()
+    .then((bank) => {
+      latestBank = bank;
+      renderLanguageOptions(state.language);
+      const language = languageSelect.value;
+      state.language = language;
+      state.selectedLevels = renderLevelCheckboxes(language, state.selectedLevels);
+      state.selectedCategories = renderCategoryCheckboxes(language, state.selectedLevels, state.selectedCategories);
+      updateFilterSummaries();
+      wordSourceStatus.textContent = 'Loaded from shared sheet';
+      if (shouldResumeReveal) {
+        renderReveal();
+        switchScreen('reveal');
+        shouldResumeReveal = false;
+      } else {
+        renderReveal();
+      }
+      return bank;
+    })
+    .catch((err) => {
+      setupError.textContent = err.message;
+      wordSourceStatus.textContent = 'Unable to load words';
+      throw err;
+    })
+    .finally(() => {
+      bankPromise = null;
+    });
+
+  return bankPromise;
+}
+
+function ensureSelectionSync() {
+  const language = languageSelect.value;
+  state.language = language;
+  state.selectedLevels = renderLevelCheckboxes(language, state.selectedLevels);
+  state.selectedCategories = renderCategoryCheckboxes(language, state.selectedLevels, state.selectedCategories);
+  updateFilterSummaries();
+}
+
+startGameBtn.addEventListener('click', () => startGame());
 resetGameBtn.addEventListener('click', () => {
   playerInput.value = '';
   impostorInput.value = 1;
   setupError.textContent = '';
 });
 
-newRoundBtn.addEventListener('click', () => {
+newRoundBtn.addEventListener('click', async () => {
   closeModal();
-  newRound();
+  try {
+    await refreshWordBank();
+    newRound();
+  } catch (err) {
+    setupError.textContent = err.message;
+  }
 });
 
 editPlayersBtn.addEventListener('click', () => {
@@ -389,7 +591,32 @@ editPlayersBtn.addEventListener('click', () => {
 });
 
 languageSelect.addEventListener('change', () => {
-  populateLevelOptions(languageSelect.value, levelSelect.value);
+  ensureSelectionSync();
+});
+
+levelCheckboxes.addEventListener('change', (event) => {
+  if (event.target instanceof HTMLInputElement && event.target.type === 'checkbox') {
+    const selectedLevels = Array.from(levelCheckboxes.querySelectorAll('input[type="checkbox"]'))
+      .filter((input) => input.checked)
+      .map((input) => input.value);
+    state.selectedLevels = selectedLevels;
+    state.selectedCategories = renderCategoryCheckboxes(
+      languageSelect.value,
+      state.selectedLevels,
+      state.selectedCategories
+    );
+    updateFilterSummaries();
+  }
+});
+
+categoryCheckboxes.addEventListener('change', (event) => {
+  if (event.target instanceof HTMLInputElement && event.target.type === 'checkbox') {
+    const selectedCategories = Array.from(categoryCheckboxes.querySelectorAll('input[type="checkbox"]'))
+      .filter((input) => input.checked)
+      .map((input) => input.value);
+    state.selectedCategories = selectedCategories;
+    updateFilterSummaries();
+  }
 });
 
 hardResetBtn.addEventListener('click', () => {
@@ -416,5 +643,5 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-populateLevelOptions(state.language, state.level);
 loadState();
+refreshWordBank();

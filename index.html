@@ -22,21 +22,27 @@
       <div class="field-group">
         <div class="field-heading">
           <span class="field-label">Word bank</span>
+          <span id="wordSourceStatus" class="hint"></span>
         </div>
-        <div class="double-field">
-          <label class="field">
-            <span class="field-label">Language</span>
-            <select id="languageSelect">
-              <option value="en">English</option>
-              <option value="ca">Catalan</option>
-              <option value="fr">French</option>
-            </select>
-          </label>
+        <label class="field">
+          <span class="field-label">Language</span>
+          <select id="languageSelect"></select>
+        </label>
 
-          <label class="field">
-            <span class="field-label">Level (CEFR)</span>
-            <select id="levelSelect"></select>
-          </label>
+        <div class="field">
+          <div class="field-heading">
+            <span class="field-label">Levels</span>
+            <span class="hint">Select one or more</span>
+          </div>
+          <div id="levelCheckboxes" class="pill-group"></div>
+        </div>
+
+        <div class="field">
+          <div class="field-heading">
+            <span class="field-label">Categories</span>
+            <span class="hint">Select one or more</span>
+          </div>
+          <div id="categoryCheckboxes" class="pill-group"></div>
         </div>
       </div>
 
@@ -69,6 +75,10 @@
           <div>
             <p class="label">Level</p>
             <p id="levelDisplay" class="category small"></p>
+          </div>
+          <div>
+            <p class="label">Categories</p>
+            <p id="categoryFiltersDisplay" class="category small"></p>
           </div>
         </div>
         <div class="start-player-panel">

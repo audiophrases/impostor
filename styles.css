@@ -126,6 +126,53 @@ button:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
+.pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill-option {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+}
+
+.pill-option:hover {
+  transform: translateY(-1px);
+}
+
+.pill-badge {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: #e2e8f0;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.hidden-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hidden-input:checked + .pill-badge {
+  background: rgba(37, 99, 235, 0.15);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.hidden-input:focus-visible + .pill-badge {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 button {
   border: none;
   border-radius: 10px;
