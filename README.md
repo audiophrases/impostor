@@ -20,6 +20,5 @@ A minimalist ESL classroom helper for running the "Impostor Game" on a shared de
 
 ## Editing the word bank
 
-- Open `data.js` and edit the `BANK` constant.
-- The structure is `language -> CEFR level -> category -> words`.
-- Add or remove categories per level while keeping classroom-friendly words for each language (English, Catalan, French by default).
+- Words now load from the shared Google Sheet on every page load and at the start of each new round.
+- Update the sheet columns (`Language`, `Level`, `Category`, and `Word`) to add or remove entries. New languages, levels, or categories will appear automatically as filter options in the app.
