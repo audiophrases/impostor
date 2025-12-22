@@ -9,7 +9,6 @@ const revealScreen = document.getElementById('revealScreen');
 const playerInput = document.getElementById('playerInput');
 const impostorInput = document.getElementById('impostorInput');
 const languageSelect = document.getElementById('languageSelect');
-const uiLanguageSelect = document.getElementById('uiLanguageSelect');
 const levelCheckboxes = document.getElementById('levelCheckboxes');
 const categoryCheckboxes = document.getElementById('categoryCheckboxes');
 const wordSourceStatus = document.getElementById('wordSourceStatus');
@@ -36,8 +35,6 @@ const startPlayerDisplay = document.getElementById('startPlayerDisplay');
 const impostorReveal = document.getElementById('impostorReveal');
 const appTitle = document.getElementById('appTitle');
 const setupTitle = document.getElementById('setupTitle');
-const uiLanguageLabel = document.getElementById('uiLanguageLabel');
-const uiLanguageHint = document.getElementById('uiLanguageHint');
 const playerNamesLabel = document.getElementById('playerNamesLabel');
 const wordBankLabel = document.getElementById('wordBankLabel');
 const languageLabel = document.getElementById('languageLabel');
@@ -62,24 +59,15 @@ let state = {
   word: '',
   revealed: [],
   language: 'en',
-  uiLanguage: 'en',
   selectedLevels: [],
   selectedCategories: [],
   startPlayerIndex: null,
 };
 
-const UI_LANGUAGES = [
-  { value: 'en', label: 'English' },
-  { value: 'ca', label: 'Català' },
-  { value: 'fr', label: 'Français' },
-];
-
 const translations = {
   en: {
     appTitle: 'Impostor Game',
     setupTitle: 'Setup',
-    uiLanguageLabel: 'UI language',
-    uiLanguageHint: 'Change the interface language',
     playerNamesLabel: 'Player names (one per line)',
     playerPlaceholder: 'Sam\nMina\nAlex',
     wordBankLabel: 'Word bank',
@@ -132,8 +120,6 @@ const translations = {
   ca: {
     appTitle: "Joc de l'Impostor",
     setupTitle: 'Configuració',
-    uiLanguageLabel: 'Idioma de la interfície',
-    uiLanguageHint: "Canvia l'idioma de la interfície",
     playerNamesLabel: 'Noms dels jugadors (un per línia)',
     playerPlaceholder: 'Sam\nMina\nAlex',
     wordBankLabel: 'Banc de paraules',
@@ -186,8 +172,6 @@ const translations = {
   fr: {
     appTitle: "Jeu de l'Imposteur",
     setupTitle: 'Configuration',
-    uiLanguageLabel: 'Langue de l’interface',
-    uiLanguageHint: 'Changer la langue de l’interface',
     playerNamesLabel: 'Noms des joueurs (un par ligne)',
     playerPlaceholder: 'Sam\nMina\nAlex',
     wordBankLabel: 'Banque de mots',
@@ -248,29 +232,15 @@ let shouldResumeReveal = false;
 let currentWordStatusKey = null;
 
 function t(key) {
-  const lang = translations[state.uiLanguage] ? state.uiLanguage : 'en';
+  const lang = translations[state.language] ? state.language : 'en';
   return translations[lang][key] ?? translations.en[key] ?? key;
 }
 
-function renderUILanguageOptions(selectedLanguage) {
-  uiLanguageSelect.innerHTML = '';
-  UI_LANGUAGES.forEach(({ value, label }) => {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = label;
-    uiLanguageSelect.appendChild(option);
-  });
-  const desired = UI_LANGUAGES.some((lang) => lang.value === selectedLanguage) ? selectedLanguage : 'en';
-  uiLanguageSelect.value = desired;
-}
-
 function applyTranslations() {
-  document.documentElement.lang = state.uiLanguage;
+  document.documentElement.lang = state.language;
   document.title = t('appTitle');
   appTitle.textContent = t('appTitle');
   setupTitle.textContent = t('setupTitle');
-  uiLanguageLabel.textContent = t('uiLanguageLabel');
-  uiLanguageHint.textContent = t('uiLanguageHint');
   playerNamesLabel.textContent = t('playerNamesLabel');
   playerInput.placeholder = t('playerPlaceholder');
   wordBankLabel.textContent = t('wordBankLabel');
@@ -439,7 +409,6 @@ function loadState() {
         ...state,
         ...parsed,
         language: parsed.language || state.language,
-        uiLanguage: parsed.uiLanguage || state.uiLanguage,
         selectedLevels: parsed.selectedLevels || [],
         selectedCategories: parsed.selectedCategories || [],
       };
@@ -754,7 +723,6 @@ function hardReset() {
     word: '',
     revealed: [],
     language: 'en',
-    uiLanguage: 'en',
     selectedLevels: [],
     selectedCategories: [],
     startPlayerIndex: null,
@@ -765,8 +733,6 @@ function hardReset() {
   const defaultLanguage = languages.includes('en') ? 'en' : languages[0] || 'en';
   languageSelect.value = defaultLanguage;
   state.language = defaultLanguage;
-  renderUILanguageOptions(state.uiLanguage);
-  uiLanguageSelect.value = state.uiLanguage;
   state.selectedLevels = renderLevelCheckboxes(defaultLanguage, LEVEL_ORDER);
   state.selectedCategories = renderCategoryCheckboxes(defaultLanguage, state.selectedLevels);
   updateFilterSummaries();
@@ -779,7 +745,6 @@ function populateSetup() {
   playerInput.value = state.players.join('\n');
   impostorInput.value = state.impostorCount;
   languageSelect.value = state.language;
-  uiLanguageSelect.value = state.uiLanguage;
   state.selectedLevels = renderLevelCheckboxes(state.language, state.selectedLevels);
   state.selectedCategories = renderCategoryCheckboxes(state.language, state.selectedLevels, state.selectedCategories);
   updateFilterSummaries();
@@ -798,6 +763,7 @@ async function refreshWordBank() {
       state.selectedLevels = renderLevelCheckboxes(language, state.selectedLevels);
       state.selectedCategories = renderCategoryCheckboxes(language, state.selectedLevels, state.selectedCategories);
       updateFilterSummaries();
+      applyTranslations();
       setWordStatus('loadedWords');
       if (shouldResumeReveal) {
         renderReveal();
@@ -826,6 +792,8 @@ function ensureSelectionSync() {
   state.selectedLevels = renderLevelCheckboxes(language, state.selectedLevels);
   state.selectedCategories = renderCategoryCheckboxes(language, state.selectedLevels, state.selectedCategories);
   updateFilterSummaries();
+  applyTranslations();
+  saveState();
 }
 
 startGameBtn.addEventListener('click', () => startGame());
@@ -853,13 +821,6 @@ editPlayersBtn.addEventListener('click', () => {
 
 languageSelect.addEventListener('change', () => {
   ensureSelectionSync();
-});
-
-uiLanguageSelect.addEventListener('change', () => {
-  state.uiLanguage = uiLanguageSelect.value;
-  applyTranslations();
-  renderReveal();
-  saveState();
 });
 
 levelCheckboxes.addEventListener('change', (event) => {
@@ -912,6 +873,5 @@ document.addEventListener('keydown', (e) => {
 });
 
 loadState();
-renderUILanguageOptions(state.uiLanguage);
 applyTranslations();
 refreshWordBank();
