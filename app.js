@@ -304,18 +304,22 @@ function availableCategories(language, levels) {
 }
 
 function renderLanguageOptions(selectedLanguage) {
-  languageSelect.innerHTML = '';
-  const languages = Object.keys(latestBank);
-  languages.sort((a, b) => a.localeCompare(b));
+  const languages = new Set([...existingLanguageOptions(), ...Object.keys(latestBank)]);
+  if (selectedLanguage) {
+    languages.add(selectedLanguage);
+  }
 
-  languages.forEach((lang) => {
+  const ordered = Array.from(languages).sort((a, b) => a.localeCompare(b));
+  languageSelect.innerHTML = '';
+
+  ordered.forEach((lang) => {
     const option = document.createElement('option');
     option.value = lang;
     option.textContent = lang;
     languageSelect.appendChild(option);
   });
 
-  const desired = languages.includes(selectedLanguage) ? selectedLanguage : languages[0];
+  const desired = ordered.includes(selectedLanguage) ? selectedLanguage : ordered[0];
   languageSelect.value = desired;
 }
 
@@ -383,6 +387,28 @@ function renderCategoryCheckboxes(language, levels, preferredCategories = []) {
 function describeSelection(values) {
   if (!values.length) return t('noneSelected');
   return values.join(', ');
+}
+
+function existingLanguageOptions() {
+  return Array.from(languageSelect.options)
+    .map((option) => option.value)
+    .filter(Boolean);
+}
+
+function ensureInitialLanguageOption() {
+  const languages = new Set([...existingLanguageOptions(), ...Object.keys(translations)]);
+  languages.add(state.language || 'en');
+  const sorted = Array.from(languages).sort((a, b) => a.localeCompare(b));
+  languageSelect.innerHTML = '';
+  sorted.forEach((lang) => {
+    const option = document.createElement('option');
+    option.value = lang;
+    option.textContent = lang;
+    languageSelect.appendChild(option);
+  });
+  const desired = languages.has(state.language) ? state.language : sorted[0];
+  languageSelect.value = desired;
+  state.language = desired;
 }
 
 function updateFilterSummaries() {
@@ -873,5 +899,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 loadState();
+ensureInitialLanguageOption();
 applyTranslations();
+updateFilterSummaries();
 refreshWordBank();
