@@ -9,6 +9,7 @@ const revealScreen = document.getElementById('revealScreen');
 const playerInput = document.getElementById('playerInput');
 const impostorInput = document.getElementById('impostorInput');
 const languageSelect = document.getElementById('languageSelect');
+const uiLanguageSelect = document.getElementById('uiLanguageSelect');
 const levelCheckboxes = document.getElementById('levelCheckboxes');
 const categoryCheckboxes = document.getElementById('categoryCheckboxes');
 const wordSourceStatus = document.getElementById('wordSourceStatus');
@@ -33,6 +34,25 @@ const revealButton = document.getElementById('revealButton');
 const hideButton = document.getElementById('hideButton');
 const startPlayerDisplay = document.getElementById('startPlayerDisplay');
 const impostorReveal = document.getElementById('impostorReveal');
+const appTitle = document.getElementById('appTitle');
+const setupTitle = document.getElementById('setupTitle');
+const uiLanguageLabel = document.getElementById('uiLanguageLabel');
+const uiLanguageHint = document.getElementById('uiLanguageHint');
+const playerNamesLabel = document.getElementById('playerNamesLabel');
+const wordBankLabel = document.getElementById('wordBankLabel');
+const languageLabel = document.getElementById('languageLabel');
+const levelsLabel = document.getElementById('levelsLabel');
+const levelsHint = document.getElementById('levelsHint');
+const categoriesLabel = document.getElementById('categoriesLabel');
+const categoriesHint = document.getElementById('categoriesHint');
+const impostorLabel = document.getElementById('impostorLabel');
+const impostorHint = document.getElementById('impostorHint');
+const revealCategoryLabel = document.getElementById('revealCategoryLabel');
+const revealLanguageLabel = document.getElementById('revealLanguageLabel');
+const revealLevelLabel = document.getElementById('revealLevelLabel');
+const revealFiltersLabel = document.getElementById('revealFiltersLabel');
+const startPlayerLabel = document.getElementById('startPlayerLabel');
+const startPlayerHint = document.getElementById('startPlayerHint');
 
 let state = {
   players: [],
@@ -42,9 +62,182 @@ let state = {
   word: '',
   revealed: [],
   language: 'en',
+  uiLanguage: 'en',
   selectedLevels: [],
   selectedCategories: [],
   startPlayerIndex: null,
+};
+
+const UI_LANGUAGES = [
+  { value: 'en', label: 'English' },
+  { value: 'ca', label: 'Català' },
+  { value: 'fr', label: 'Français' },
+];
+
+const translations = {
+  en: {
+    appTitle: 'Impostor Game',
+    setupTitle: 'Setup',
+    uiLanguageLabel: 'UI language',
+    uiLanguageHint: 'Change the interface language',
+    playerNamesLabel: 'Player names (one per line)',
+    playerPlaceholder: 'Sam\nMina\nAlex',
+    wordBankLabel: 'Word bank',
+    languageLabel: 'Language',
+    levelsLabel: 'Levels',
+    levelsHint: 'Select one or more',
+    categoriesLabel: 'Categories',
+    categoriesHint: 'Select one or more',
+    impostorLabel: 'Number of impostors',
+    impostorHint: 'At least 1 and less than players',
+    startGame: 'Start game',
+    reset: 'Reset',
+    revealCategoryLabel: 'Category',
+    revealLanguageLabel: 'Language',
+    revealLevelLabel: 'Level',
+    revealFiltersLabel: 'Categories',
+    startPlayerLabel: 'Starting player',
+    startPlayerHint: 'This player begins the round and could be the impostor.',
+    newRound: 'New round',
+    editPlayers: 'Edit players',
+    hardReset: 'Hard reset',
+    showImpostors: 'Reveal impostor(s)',
+    categoryNotStarted: 'Not started yet',
+    noStartPlayer: 'No player selected yet',
+    passDevice: 'Pass the device to:',
+    reveal: 'Reveal',
+    hide: 'Hide',
+    impostorYes: 'You ARE the impostor.',
+    impostorNo: 'You are NOT the impostor.',
+    categoryLabel: 'Category',
+    secretWordLabel: 'Secret word',
+    waiting: 'Waiting',
+    revealedStatus: '✓ Revealed',
+    starterSuffix: ' • Starts',
+    noneSelected: 'None selected',
+    selectLevelsError: 'Choose at least one level.',
+    selectCategoriesError: 'Choose at least one category.',
+    playersError: 'Please enter at least 3 players.',
+    impostorCountError: 'Impostors must be at least 1 and fewer than players.',
+    noWordsError: 'No words available for that language, level, and category combination.',
+    wordUnavailable: 'No words available for the selected filters.',
+    confirmReveal:
+      'Are you sure you want to see who the impostor(s) are? This will reveal them to everyone.',
+    impostorLabelShort: 'Impostor',
+    impostorsLabelShort: 'Impostors',
+    loadingWords: 'Loading latest words...',
+    loadedWords: 'Loaded from shared sheet',
+    unableToLoadWords: 'Unable to load words',
+  },
+  ca: {
+    appTitle: "Joc de l'Impostor",
+    setupTitle: 'Configuració',
+    uiLanguageLabel: 'Idioma de la interfície',
+    uiLanguageHint: "Canvia l'idioma de la interfície",
+    playerNamesLabel: 'Noms dels jugadors (un per línia)',
+    playerPlaceholder: 'Sam\nMina\nAlex',
+    wordBankLabel: 'Banc de paraules',
+    languageLabel: 'Idioma',
+    levelsLabel: 'Nivells',
+    levelsHint: "Selecciona'n un o més",
+    categoriesLabel: 'Categories',
+    categoriesHint: "Selecciona'n una o més",
+    impostorLabel: "Nombre d'impostors",
+    impostorHint: 'Com a mínim 1 i menys que els jugadors',
+    startGame: 'Comença la partida',
+    reset: 'Reinicia',
+    revealCategoryLabel: 'Categoria',
+    revealLanguageLabel: 'Idioma',
+    revealLevelLabel: 'Nivell',
+    revealFiltersLabel: 'Categories',
+    startPlayerLabel: 'Jugador inicial',
+    startPlayerHint: "Aquest jugador comença la ronda i podria ser l'impostor.",
+    newRound: 'Nova ronda',
+    editPlayers: 'Edita els jugadors',
+    hardReset: 'Reinici complet',
+    showImpostors: "Mostra l'impostor(s)",
+    categoryNotStarted: "Encara no s'ha començat",
+    noStartPlayer: 'Cap jugador seleccionat encara',
+    passDevice: 'Passa el dispositiu a:',
+    reveal: 'Mostra',
+    hide: 'Amaga',
+    impostorYes: 'ETS l’impostor.',
+    impostorNo: 'NO ets l’impostor.',
+    categoryLabel: 'Categoria',
+    secretWordLabel: 'Paraula secreta',
+    waiting: 'Esperant',
+    revealedStatus: '✓ Revelat',
+    starterSuffix: ' • Comença',
+    noneSelected: 'Cap seleccionat',
+    selectLevelsError: 'Tria almenys un nivell.',
+    selectCategoriesError: 'Tria almenys una categoria.',
+    playersError: 'Introdueix almenys 3 jugadors.',
+    impostorCountError: 'Els impostors han de ser com a mínim 1 i menys que els jugadors.',
+    noWordsError: 'No hi ha paraules per a aquesta combinació d’idioma, nivell i categoria.',
+    wordUnavailable: 'No hi ha paraules per als filtres seleccionats.',
+    confirmReveal:
+      'Segur que vols veure qui és/ són l’impostor(s)? Això els revelarà a tothom.',
+    impostorLabelShort: 'Impostor',
+    impostorsLabelShort: 'Impostors',
+    loadingWords: 'Carregant les paraules més recents...',
+    loadedWords: 'Carregades des del full compartit',
+    unableToLoadWords: 'No s’han pogut carregar les paraules',
+  },
+  fr: {
+    appTitle: "Jeu de l'Imposteur",
+    setupTitle: 'Configuration',
+    uiLanguageLabel: 'Langue de l’interface',
+    uiLanguageHint: 'Changer la langue de l’interface',
+    playerNamesLabel: 'Noms des joueurs (un par ligne)',
+    playerPlaceholder: 'Sam\nMina\nAlex',
+    wordBankLabel: 'Banque de mots',
+    languageLabel: 'Langue',
+    levelsLabel: 'Niveaux',
+    levelsHint: 'Sélectionnez-en un ou plusieurs',
+    categoriesLabel: 'Catégories',
+    categoriesHint: 'Sélectionnez-en une ou plusieurs',
+    impostorLabel: "Nombre d'imposteurs",
+    impostorHint: 'Au moins 1 et moins que les joueurs',
+    startGame: 'Démarrer la partie',
+    reset: 'Réinitialiser',
+    revealCategoryLabel: 'Catégorie',
+    revealLanguageLabel: 'Langue',
+    revealLevelLabel: 'Niveau',
+    revealFiltersLabel: 'Catégories',
+    startPlayerLabel: 'Joueur de départ',
+    startPlayerHint: 'Ce joueur commence la manche et peut être l’imposteur.',
+    newRound: 'Nouvelle manche',
+    editPlayers: 'Modifier les joueurs',
+    hardReset: 'Réinitialisation totale',
+    showImpostors: "Révéler l'imposteur/les imposteurs",
+    categoryNotStarted: 'Pas encore commencé',
+    noStartPlayer: 'Aucun joueur sélectionné',
+    passDevice: 'Passez l’appareil à :',
+    reveal: 'Révéler',
+    hide: 'Masquer',
+    impostorYes: 'Vous ÊTES l’imposteur.',
+    impostorNo: "Vous n'êtes PAS l’imposteur.",
+    categoryLabel: 'Catégorie',
+    secretWordLabel: 'Mot secret',
+    waiting: 'En attente',
+    revealedStatus: '✓ Révélé',
+    starterSuffix: ' • Commence',
+    noneSelected: 'Aucune sélection',
+    selectLevelsError: 'Choisissez au moins un niveau.',
+    selectCategoriesError: 'Choisissez au moins une catégorie.',
+    playersError: 'Saisissez au moins 3 joueurs.',
+    impostorCountError: "Les imposteurs doivent être au moins 1 et moins que les joueurs.",
+    noWordsError:
+      "Aucun mot disponible pour cette combinaison de langue, niveau et catégorie.",
+    wordUnavailable: 'Aucun mot disponible pour les filtres sélectionnés.',
+    confirmReveal:
+      "Êtes-vous sûr de vouloir afficher l’imposteur/les imposteurs ? Cela le révélera à tous.",
+    impostorLabelShort: 'Imposteur',
+    impostorsLabelShort: 'Imposteurs',
+    loadingWords: 'Chargement des derniers mots...',
+    loadedWords: 'Chargés depuis la feuille partagée',
+    unableToLoadWords: 'Impossible de charger les mots',
+  },
 };
 
 let latestBank = {};
@@ -52,6 +245,60 @@ let bankPromise = null;
 let currentPlayerIndex = null;
 let hideTimer = null;
 let shouldResumeReveal = false;
+let currentWordStatusKey = null;
+
+function t(key) {
+  const lang = translations[state.uiLanguage] ? state.uiLanguage : 'en';
+  return translations[lang][key] ?? translations.en[key] ?? key;
+}
+
+function renderUILanguageOptions(selectedLanguage) {
+  uiLanguageSelect.innerHTML = '';
+  UI_LANGUAGES.forEach(({ value, label }) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    uiLanguageSelect.appendChild(option);
+  });
+  const desired = UI_LANGUAGES.some((lang) => lang.value === selectedLanguage) ? selectedLanguage : 'en';
+  uiLanguageSelect.value = desired;
+}
+
+function applyTranslations() {
+  document.documentElement.lang = state.uiLanguage;
+  document.title = t('appTitle');
+  appTitle.textContent = t('appTitle');
+  setupTitle.textContent = t('setupTitle');
+  uiLanguageLabel.textContent = t('uiLanguageLabel');
+  uiLanguageHint.textContent = t('uiLanguageHint');
+  playerNamesLabel.textContent = t('playerNamesLabel');
+  playerInput.placeholder = t('playerPlaceholder');
+  wordBankLabel.textContent = t('wordBankLabel');
+  languageLabel.textContent = t('languageLabel');
+  levelsLabel.textContent = t('levelsLabel');
+  levelsHint.textContent = t('levelsHint');
+  categoriesLabel.textContent = t('categoriesLabel');
+  categoriesHint.textContent = t('categoriesHint');
+  impostorLabel.textContent = t('impostorLabel');
+  impostorHint.textContent = t('impostorHint');
+  startGameBtn.textContent = t('startGame');
+  resetGameBtn.textContent = t('reset');
+  revealCategoryLabel.textContent = t('revealCategoryLabel');
+  revealLanguageLabel.textContent = t('revealLanguageLabel');
+  revealLevelLabel.textContent = t('revealLevelLabel');
+  revealFiltersLabel.textContent = t('revealFiltersLabel');
+  startPlayerLabel.textContent = t('startPlayerLabel');
+  startPlayerHint.textContent = t('startPlayerHint');
+  newRoundBtn.textContent = t('newRound');
+  editPlayersBtn.textContent = t('editPlayers');
+  hardResetBtn.textContent = t('hardReset');
+  showImpostorsBtn.textContent = t('showImpostors');
+  revealButton.textContent = t('reveal');
+  hideButton.textContent = t('hide');
+  if (currentWordStatusKey) {
+    wordSourceStatus.textContent = t(currentWordStatusKey);
+  }
+}
 
 function allPlayersRevealed() {
   return state.revealed.length > 0 && state.revealed.every(Boolean);
@@ -164,7 +411,7 @@ function renderCategoryCheckboxes(language, levels, preferredCategories = []) {
 }
 
 function describeSelection(values) {
-  if (!values.length) return 'None selected';
+  if (!values.length) return t('noneSelected');
   return values.join(', ');
 }
 
@@ -177,6 +424,11 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function setWordStatus(key) {
+  currentWordStatusKey = key;
+  wordSourceStatus.textContent = key ? t(key) : '';
+}
+
 function loadState() {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) return;
@@ -187,6 +439,7 @@ function loadState() {
         ...state,
         ...parsed,
         language: parsed.language || state.language,
+        uiLanguage: parsed.uiLanguage || state.uiLanguage,
         selectedLevels: parsed.selectedLevels || [],
         selectedCategories: parsed.selectedCategories || [],
       };
@@ -252,7 +505,7 @@ function buildWordPool() {
 function randomCategoryAndWord() {
   const pool = buildWordPool();
   if (!pool.length) {
-    throw new Error('No words available for the selected filters.');
+    throw new Error(t('wordUnavailable'));
   }
 
   return pool[Math.floor(Math.random() * pool.length)];
@@ -294,22 +547,22 @@ async function startGame() {
     .filter((category) => availableCategories(language, selectedLevels).includes(category));
 
   if (players.length < 3) {
-    setupError.textContent = 'Please enter at least 3 players.';
+    setupError.textContent = t('playersError');
     return;
   }
 
   if (!Number.isInteger(impostorCount) || impostorCount < 1 || impostorCount >= players.length) {
-    setupError.textContent = 'Impostors must be at least 1 and fewer than players.';
+    setupError.textContent = t('impostorCountError');
     return;
   }
 
   if (!selectedLevels.length) {
-    setupError.textContent = 'Choose at least one level.';
+    setupError.textContent = t('selectLevelsError');
     return;
   }
 
   if (!selectedCategories.length) {
-    setupError.textContent = 'Choose at least one category.';
+    setupError.textContent = t('selectCategoriesError');
     return;
   }
 
@@ -319,7 +572,7 @@ async function startGame() {
 
   const pool = buildWordPool();
   if (!pool.length) {
-    setupError.textContent = 'No words available for that language, level, and category combination.';
+    setupError.textContent = t('noWordsError');
     return;
   }
 
@@ -347,14 +600,14 @@ async function startGame() {
 }
 
 function renderReveal() {
-  categoryDisplay.textContent = state.category || 'Not started yet';
+  categoryDisplay.textContent = state.category || t('categoryNotStarted');
   languageDisplay.textContent = state.language.toUpperCase();
   levelDisplay.textContent = describeSelection(state.selectedLevels);
   categoryFiltersDisplay.textContent = describeSelection(state.selectedCategories);
   const startingPlayer =
     typeof state.startPlayerIndex === 'number' && state.players[state.startPlayerIndex]
       ? state.players[state.startPlayerIndex]
-      : 'No player selected yet';
+      : t('noStartPlayer');
   startPlayerDisplay.textContent = startingPlayer;
   playersList.innerHTML = '';
 
@@ -375,8 +628,10 @@ function renderReveal() {
 
     const status = document.createElement('span');
     status.className = 'status' + (state.revealed[index] ? ' checked' : '');
-    const starterLabel = isStarter ? ' • Starts' : '';
-    status.textContent = state.revealed[index] ? `✓ Revealed${starterLabel}` : `Waiting${starterLabel}`;
+    const starterLabel = isStarter ? t('starterSuffix') : '';
+    status.textContent = state.revealed[index]
+      ? `${t('revealedStatus')}${starterLabel}`
+      : `${t('waiting')}${starterLabel}`;
 
     card.appendChild(button);
     card.appendChild(status);
@@ -394,7 +649,7 @@ function renderReveal() {
 function openModal(index) {
   currentPlayerIndex = index;
   modal.classList.remove('hidden');
-  modalPrompt.textContent = `Pass the device to:`;
+  modalPrompt.textContent = t('passDevice');
   modalTitle.textContent = state.players[index];
   showRevealPrompt();
 }
@@ -420,17 +675,17 @@ function showResult() {
 
   const body = document.createElement('div');
   const role = document.createElement('p');
-  role.textContent = isImpostor ? 'You ARE the impostor.' : 'You are NOT the impostor.';
+  role.textContent = isImpostor ? t('impostorYes') : t('impostorNo');
   role.style.fontWeight = '700';
   body.appendChild(role);
 
   const category = document.createElement('p');
-  category.textContent = `Category: ${state.category}`;
+  category.textContent = `${t('categoryLabel')}: ${state.category}`;
   body.appendChild(category);
 
   if (!isImpostor) {
     const word = document.createElement('p');
-    word.textContent = `Secret word: ${state.word}`;
+    word.textContent = `${t('secretWordLabel')}: ${state.word}`;
     body.appendChild(word);
   }
 
@@ -451,13 +706,13 @@ function revealImpostorsToGroup() {
   if (!state.players.length || !allPlayersRevealed()) return;
 
   const confirmed = window.confirm(
-    'Are you sure you want to see who the impostor(s) are? This will reveal them to everyone.'
+    t('confirmReveal')
   );
 
   if (!confirmed) return;
 
   const impostorNames = state.impostorIndexes.map((index) => state.players[index]);
-  const label = impostorNames.length > 1 ? 'Impostors' : 'Impostor';
+  const label = impostorNames.length > 1 ? t('impostorsLabelShort') : t('impostorLabelShort');
   const message = `${label}: ${impostorNames.join(', ')}`;
 
   impostorReveal.textContent = message;
@@ -490,6 +745,7 @@ function newRound() {
 
 function hardReset() {
   localStorage.removeItem(STORAGE_KEY);
+  setWordStatus(null);
   state = {
     players: [],
     impostorCount: 1,
@@ -498,6 +754,7 @@ function hardReset() {
     word: '',
     revealed: [],
     language: 'en',
+    uiLanguage: 'en',
     selectedLevels: [],
     selectedCategories: [],
     startPlayerIndex: null,
@@ -508,9 +765,12 @@ function hardReset() {
   const defaultLanguage = languages.includes('en') ? 'en' : languages[0] || 'en';
   languageSelect.value = defaultLanguage;
   state.language = defaultLanguage;
+  renderUILanguageOptions(state.uiLanguage);
+  uiLanguageSelect.value = state.uiLanguage;
   state.selectedLevels = renderLevelCheckboxes(defaultLanguage, LEVEL_ORDER);
   state.selectedCategories = renderCategoryCheckboxes(defaultLanguage, state.selectedLevels);
   updateFilterSummaries();
+  applyTranslations();
   switchScreen('setup');
   renderReveal();
 }
@@ -519,6 +779,7 @@ function populateSetup() {
   playerInput.value = state.players.join('\n');
   impostorInput.value = state.impostorCount;
   languageSelect.value = state.language;
+  uiLanguageSelect.value = state.uiLanguage;
   state.selectedLevels = renderLevelCheckboxes(state.language, state.selectedLevels);
   state.selectedCategories = renderCategoryCheckboxes(state.language, state.selectedLevels, state.selectedCategories);
   updateFilterSummaries();
@@ -527,7 +788,7 @@ function populateSetup() {
 
 async function refreshWordBank() {
   if (bankPromise) return bankPromise;
-  wordSourceStatus.textContent = 'Loading latest words...';
+  setWordStatus('loadingWords');
   bankPromise = fetchWordBank()
     .then((bank) => {
       latestBank = bank;
@@ -537,7 +798,7 @@ async function refreshWordBank() {
       state.selectedLevels = renderLevelCheckboxes(language, state.selectedLevels);
       state.selectedCategories = renderCategoryCheckboxes(language, state.selectedLevels, state.selectedCategories);
       updateFilterSummaries();
-      wordSourceStatus.textContent = 'Loaded from shared sheet';
+      setWordStatus('loadedWords');
       if (shouldResumeReveal) {
         renderReveal();
         switchScreen('reveal');
@@ -549,7 +810,7 @@ async function refreshWordBank() {
     })
     .catch((err) => {
       setupError.textContent = err.message;
-      wordSourceStatus.textContent = 'Unable to load words';
+      setWordStatus('unableToLoadWords');
       throw err;
     })
     .finally(() => {
@@ -592,6 +853,13 @@ editPlayersBtn.addEventListener('click', () => {
 
 languageSelect.addEventListener('change', () => {
   ensureSelectionSync();
+});
+
+uiLanguageSelect.addEventListener('change', () => {
+  state.uiLanguage = uiLanguageSelect.value;
+  applyTranslations();
+  renderReveal();
+  saveState();
 });
 
 levelCheckboxes.addEventListener('change', (event) => {
@@ -644,4 +912,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 loadState();
+renderUILanguageOptions(state.uiLanguage);
+applyTranslations();
 refreshWordBank();

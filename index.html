@@ -9,38 +9,45 @@
 <body>
   <main class="container">
     <header class="app-header">
-      <h1>Impostor Game</h1>
+      <h1 id="appTitle">Impostor Game</h1>
     </header>
 
     <section id="setupScreen" class="card">
-      <h2>Setup</h2>
+      <h2 id="setupTitle">Setup</h2>
+
       <label class="field">
-        <span class="field-label">Player names (one per line)</span>
+        <span class="field-label" id="uiLanguageLabel">UI language</span>
+        <span class="hint" id="uiLanguageHint">Change the interface language</span>
+        <select id="uiLanguageSelect"></select>
+      </label>
+
+      <label class="field">
+        <span class="field-label" id="playerNamesLabel">Player names (one per line)</span>
         <textarea id="playerInput" rows="6" placeholder="Sam&#10;Mina&#10;Alex"></textarea>
       </label>
 
       <div class="field-group">
         <div class="field-heading">
-          <span class="field-label">Word bank</span>
+          <span class="field-label" id="wordBankLabel">Word bank</span>
           <span id="wordSourceStatus" class="hint"></span>
         </div>
         <label class="field">
-          <span class="field-label">Language</span>
+          <span class="field-label" id="languageLabel">Language</span>
           <select id="languageSelect"></select>
         </label>
 
         <div class="field">
           <div class="field-heading">
-            <span class="field-label">Levels</span>
-            <span class="hint">Select one or more</span>
+            <span class="field-label" id="levelsLabel">Levels</span>
+            <span class="hint" id="levelsHint">Select one or more</span>
           </div>
           <div id="levelCheckboxes" class="pill-group"></div>
         </div>
 
         <div class="field">
           <div class="field-heading">
-            <span class="field-label">Categories</span>
-            <span class="hint">Select one or more</span>
+            <span class="field-label" id="categoriesLabel">Categories</span>
+            <span class="hint" id="categoriesHint">Select one or more</span>
           </div>
           <div id="categoryCheckboxes" class="pill-group"></div>
         </div>
@@ -48,8 +55,8 @@
 
       <label class="field number-field">
         <div class="field-heading">
-          <span class="field-label">Number of impostors</span>
-          <span class="hint">At least 1 and less than players</span>
+          <span class="field-label" id="impostorLabel">Number of impostors</span>
+          <span class="hint" id="impostorHint">At least 1 and less than players</span>
         </div>
         <input id="impostorInput" type="number" min="1" value="1" />
       </label>
@@ -61,32 +68,32 @@
       <p id="setupError" class="error" aria-live="polite"></p>
     </section>
 
-    <section id="revealScreen" class="card hidden">
-      <div class="reveal-header">
-        <div>
-          <p class="label">Category</p>
+      <section id="revealScreen" class="card hidden">
+        <div class="reveal-header">
+          <div>
+          <p id="revealCategoryLabel" class="label">Category</p>
           <p id="categoryDisplay" class="category"></p>
         </div>
         <div class="meta-grid">
           <div>
-            <p class="label">Language</p>
+            <p id="revealLanguageLabel" class="label">Language</p>
             <p id="languageDisplay" class="category small"></p>
           </div>
           <div>
-            <p class="label">Level</p>
+            <p id="revealLevelLabel" class="label">Level</p>
             <p id="levelDisplay" class="category small"></p>
           </div>
           <div>
-            <p class="label">Categories</p>
+            <p id="revealFiltersLabel" class="label">Categories</p>
             <p id="categoryFiltersDisplay" class="category small"></p>
           </div>
         </div>
         <div class="start-player-panel">
           <div>
-            <p class="label">Starting player</p>
+            <p id="startPlayerLabel" class="label">Starting player</p>
             <p id="startPlayerDisplay" class="category small"></p>
           </div>
-          <p class="hint">This player begins the round and could be the impostor.</p>
+          <p id="startPlayerHint" class="hint">This player begins the round and could be the impostor.</p>
         </div>
         <div class="controls">
           <button id="newRound" class="primary">New round</button>
