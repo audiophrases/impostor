@@ -62,6 +62,8 @@ let state = {
   selectedLevels: [],
   selectedCategories: [],
   startPlayerIndex: null,
+  wordQueue: { key: '', queue: [] },
+  impostorHistory: [],
 };
 
 const translations = {
@@ -475,6 +477,42 @@ function parseNames(raw) {
   });
 }
 
+function shuffleArray(list) {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function selectionKey() {
+  const levels = [...state.selectedLevels].sort().join('|');
+  const categories = [...state.selectedCategories].sort().join('|');
+  return `${state.language}__${levels}__${categories}`;
+}
+
+function wordPoolSignature(pool) {
+  return pool
+    .map(({ category, word }) => `${category}::${word}`)
+    .sort()
+    .join('|');
+}
+
+function ensureWordQueue(pool) {
+  const key = `${selectionKey()}__${wordPoolSignature(pool)}`;
+  if (!state.wordQueue || state.wordQueue.key !== key) {
+    state.wordQueue = { key, queue: shuffleArray(pool) };
+  }
+  if (!state.wordQueue.queue.length) {
+    state.wordQueue.queue = shuffleArray(pool);
+  }
+}
+
+function resetWordQueue() {
+  state.wordQueue = { key: '', queue: [] };
+}
+
 function buildWordPool() {
   const languageBank = latestBank[normalizeLanguage(state.language)];
   if (!languageBank) return [];
@@ -497,13 +535,18 @@ function buildWordPool() {
   return pool;
 }
 
-function randomCategoryAndWord() {
+function drawNextWord() {
   const pool = buildWordPool();
   if (!pool.length) {
     throw new Error(t('wordUnavailable'));
   }
 
-  return pool[Math.floor(Math.random() * pool.length)];
+  ensureWordQueue(pool);
+  const selection = state.wordQueue.queue.pop();
+  if (!state.wordQueue.queue.length) {
+    state.wordQueue.queue = shuffleArray(pool);
+  }
+  return selection;
 }
 
 function pickImpostors(count, total) {
@@ -515,9 +558,51 @@ function pickImpostors(count, total) {
   return indexes.slice(0, count);
 }
 
+function combinationCount(n, k) {
+  if (k > n || k < 0) return 0;
+  if (k === 0 || k === n) return 1;
+  let result = 1;
+  for (let i = 1; i <= k; i += 1) {
+    result = (result * (n - i + 1)) / i;
+    if (result > Number.MAX_SAFE_INTEGER) break;
+  }
+  return Math.round(result);
+}
+
+function setsMatch(a = [], b = []) {
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort((x, y) => x - y);
+  const sortedB = [...b].sort((x, y) => x - y);
+  return sortedA.every((value, index) => value === sortedB[index]);
+}
+
+function pickImpostorsWithHistory(count, total) {
+  const previous = state.impostorHistory?.[0]?.impostorIndexes || [];
+  const hasAlternatives = combinationCount(total, count) > 1;
+  const maxAttempts = hasAlternatives ? 10 : 1;
+  let candidate = pickImpostors(count, total);
+
+  for (let attempt = 1; attempt < maxAttempts && setsMatch(candidate, previous); attempt += 1) {
+    candidate = pickImpostors(count, total);
+  }
+
+  return candidate;
+}
+
 function pickStartingPlayer(total) {
   if (total <= 0) return null;
-  return Math.floor(Math.random() * total);
+  const previous = state.impostorHistory?.[0]?.startPlayerIndex;
+  if (total === 1) return 0;
+  let candidate = Math.floor(Math.random() * total);
+  for (let attempt = 0; attempt < 5 && typeof previous === 'number' && candidate === previous; attempt += 1) {
+    candidate = Math.floor(Math.random() * total);
+  }
+  return candidate;
+}
+
+function rememberImpostorSelection(impostorIndexes, startPlayerIndex) {
+  const history = Array.isArray(state.impostorHistory) ? state.impostorHistory : [];
+  state.impostorHistory = [{ impostorIndexes, startPlayerIndex }, ...history].slice(0, 5);
 }
 
 async function startGame() {
@@ -564,6 +649,8 @@ async function startGame() {
   state.language = language;
   state.selectedLevels = selectedLevels;
   state.selectedCategories = selectedCategories;
+  state.impostorHistory = [];
+  state.wordQueue = { key: '', queue: [] };
 
   const pool = buildWordPool();
   if (!pool.length) {
@@ -571,8 +658,8 @@ async function startGame() {
     return;
   }
 
-  const { category, word } = randomCategoryAndWord();
-  const impostorIndexes = pickImpostors(impostorCount, players.length);
+  const { category, word } = drawNextWord();
+  const impostorIndexes = pickImpostorsWithHistory(impostorCount, players.length);
   const startPlayerIndex = pickStartingPlayer(players.length);
 
   state = {
@@ -586,8 +673,11 @@ async function startGame() {
     selectedLevels,
     selectedCategories,
     startPlayerIndex,
+    wordQueue: state.wordQueue,
+    impostorHistory: state.impostorHistory,
   };
 
+  rememberImpostorSelection(impostorIndexes, startPlayerIndex);
   setupError.textContent = '';
   saveState();
   renderReveal();
@@ -722,13 +812,13 @@ function newRound() {
   if (!state.players.length) return;
   let selection;
   try {
-    selection = randomCategoryAndWord();
+    selection = drawNextWord();
   } catch (err) {
     setupError.textContent = err.message;
     return;
   }
   const { category, word } = selection;
-  const impostorIndexes = pickImpostors(state.impostorCount, state.players.length);
+  const impostorIndexes = pickImpostorsWithHistory(state.impostorCount, state.players.length);
   const startPlayerIndex = pickStartingPlayer(state.players.length);
   state = {
     ...state,
@@ -737,7 +827,9 @@ function newRound() {
     impostorIndexes,
     startPlayerIndex,
     revealed: new Array(state.players.length).fill(false),
+    wordQueue: state.wordQueue,
   };
+  rememberImpostorSelection(impostorIndexes, startPlayerIndex);
   saveState();
   renderReveal();
 }
@@ -756,6 +848,8 @@ function hardReset() {
     selectedLevels: [],
     selectedCategories: [],
     startPlayerIndex: null,
+    wordQueue: { key: '', queue: [] },
+    impostorHistory: [],
   };
   playerInput.value = '';
   impostorInput.value = 1;
@@ -823,6 +917,7 @@ function ensureSelectionSync() {
   state.selectedCategories = renderCategoryCheckboxes(language, state.selectedLevels, state.selectedCategories);
   updateFilterSummaries();
   applyTranslations();
+  resetWordQueue();
   saveState();
 }
 
@@ -865,6 +960,8 @@ levelCheckboxes.addEventListener('change', (event) => {
       state.selectedCategories
     );
     updateFilterSummaries();
+    resetWordQueue();
+    saveState();
   }
 });
 
@@ -875,6 +972,8 @@ categoryCheckboxes.addEventListener('change', (event) => {
       .map((input) => input.value);
     state.selectedCategories = selectedCategories;
     updateFilterSummaries();
+    resetWordQueue();
+    saveState();
   }
 });
 
