@@ -92,7 +92,7 @@ const translations = {
     showImpostors: 'Reveal impostor(s)',
     categoryNotStarted: 'Not started yet',
     noStartPlayer: 'No player selected yet',
-    passDevice: 'Pass the device to:',
+    passDevice: "It's your turn!",
     reveal: 'Reveal',
     hide: 'Hide',
     impostorYes: 'You ARE the impostor.',
@@ -144,7 +144,7 @@ const translations = {
     showImpostors: "Mostra l'impostor(s)",
     categoryNotStarted: "Encara no s'ha començat",
     noStartPlayer: 'Cap jugador seleccionat encara',
-    passDevice: 'Passa el dispositiu a:',
+    passDevice: 'És el teu torn!',
     reveal: 'Mostra',
     hide: 'Amaga',
     impostorYes: 'ETS l’impostor.',
@@ -196,7 +196,7 @@ const translations = {
     showImpostors: "Révéler l'imposteur/les imposteurs",
     categoryNotStarted: 'Pas encore commencé',
     noStartPlayer: 'Aucun joueur sélectionné',
-    passDevice: 'Passez l’appareil à :',
+    passDevice: "C'est ton tour !",
     reveal: 'Révéler',
     hide: 'Masquer',
     impostorYes: 'Vous ÊTES l’imposteur.',
@@ -669,18 +669,22 @@ function showResult() {
   const isImpostor = state.impostorIndexes.includes(index);
 
   const body = document.createElement('div');
+  body.className = 'reveal-results';
+
   const role = document.createElement('p');
   role.textContent = isImpostor ? t('impostorYes') : t('impostorNo');
-  role.style.fontWeight = '700';
+  role.className = 'role-callout';
   body.appendChild(role);
 
   const category = document.createElement('p');
-  category.textContent = `${t('categoryLabel')}: ${state.category}`;
+  category.className = 'secret-highlight';
+  category.innerHTML = `<span class="secret-label">${t('categoryLabel')}</span><span class="secret-value category-value">${state.category}</span>`;
   body.appendChild(category);
 
   if (!isImpostor) {
     const word = document.createElement('p');
-    word.textContent = `${t('secretWordLabel')}: ${state.word}`;
+    word.className = 'secret-highlight';
+    word.innerHTML = `<span class="secret-label">${t('secretWordLabel')}</span><span class="secret-value word-value">${state.word}</span>`;
     body.appendChild(word);
   }
 
