@@ -64,6 +64,7 @@ let state = {
   startPlayerIndex: null,
   wordQueue: { key: '', queue: [] },
   impostorHistory: [],
+  categoryHistory: [],
 };
 
 const translations = {
@@ -439,7 +440,11 @@ function loadState() {
         language: parsed.language || state.language,
         selectedLevels: parsed.selectedLevels || [],
         selectedCategories: parsed.selectedCategories || [],
+        impostorHistory: Array.isArray(parsed.impostorHistory) ? parsed.impostorHistory : [],
+        categoryHistory: Array.isArray(parsed.categoryHistory) ? parsed.categoryHistory : [],
       };
+      state.impostorHistory = state.impostorHistory.slice(0, IMPOSTOR_HISTORY_LIMIT);
+      state.categoryHistory = state.categoryHistory.slice(0, CATEGORY_HISTORY_LIMIT);
 
       impostorInput.value = state.impostorCount || 1;
       playerInput.value = state.players.join('\n');
@@ -542,7 +547,14 @@ function drawNextWord() {
   }
 
   ensureWordQueue(pool);
-  const selection = state.wordQueue.queue.pop();
+  const recentCategories = new Set((state.categoryHistory || []).slice(0, CATEGORY_HISTORY_LIMIT));
+  const hasFreshCategory = state.wordQueue.queue.some(({ category }) => !recentCategories.has(category));
+  const categoryWeights = state.wordQueue.queue.map(({ category }) => {
+    if (!hasFreshCategory) return 1;
+    return recentCategories.has(category) ? CATEGORY_RECENT_PENALTY : 1;
+  });
+  const chosenIndex = weightedRandomIndex(categoryWeights);
+  const [selection] = state.wordQueue.queue.splice(chosenIndex, 1);
   if (!state.wordQueue.queue.length) {
     state.wordQueue.queue = shuffleArray(pool);
   }
@@ -569,40 +581,85 @@ function combinationCount(n, k) {
   return Math.round(result);
 }
 
-function setsMatch(a = [], b = []) {
-  if (a.length !== b.length) return false;
-  const sortedA = [...a].sort((x, y) => x - y);
-  const sortedB = [...b].sort((x, y) => x - y);
-  return sortedA.every((value, index) => value === sortedB[index]);
+const IMPOSTOR_HISTORY_LIMIT = 5;
+const CATEGORY_HISTORY_LIMIT = 4;
+const CATEGORY_RECENT_PENALTY = 0.35;
+const IMPOSTOR_RECENT_PENALTY = 0.3;
+const STARTER_IMPOSTOR_WEIGHT = 0.45;
+const STARTER_REPEAT_PENALTY = 0.65;
+const MIN_FAIR_WEIGHT = 0.1;
+
+function weightedRandomIndex(weights) {
+  const sanitized = weights.map((weight) => Math.max(MIN_FAIR_WEIGHT, Number(weight) || 0));
+  const totalWeight = sanitized.reduce((sum, weight) => sum + weight, 0);
+  if (totalWeight <= 0) {
+    return Math.floor(Math.random() * weights.length);
+  }
+  let threshold = Math.random() * totalWeight;
+  for (let i = 0; i < sanitized.length; i += 1) {
+    threshold -= sanitized[i];
+    if (threshold <= 0) return i;
+  }
+  return sanitized.length - 1;
+}
+
+function sampleWeightedWithoutReplacement(indexes, weights, picks) {
+  const pool = indexes.map((index, i) => ({ index, weight: weights[i] }));
+  const chosen = [];
+
+  while (chosen.length < picks && pool.length) {
+    const drawIndex = weightedRandomIndex(pool.map((entry) => entry.weight));
+    const [{ index }] = pool.splice(drawIndex, 1);
+    chosen.push(index);
+  }
+
+  return chosen;
 }
 
 function pickImpostorsWithHistory(count, total) {
-  const previous = state.impostorHistory?.[0]?.impostorIndexes || [];
-  const hasAlternatives = combinationCount(total, count) > 1;
-  const maxAttempts = hasAlternatives ? 10 : 1;
-  let candidate = pickImpostors(count, total);
-
-  for (let attempt = 1; attempt < maxAttempts && setsMatch(candidate, previous); attempt += 1) {
-    candidate = pickImpostors(count, total);
+  if (combinationCount(total, count) <= 1) {
+    return pickImpostors(count, total);
   }
 
-  return candidate;
+  const recencyWeights = (state.impostorHistory || [])
+    .slice(0, IMPOSTOR_HISTORY_LIMIT)
+    .map((_, index) => (IMPOSTOR_HISTORY_LIMIT - index) / IMPOSTOR_HISTORY_LIMIT);
+
+  const penalties = Array.from({ length: total }, () => 0);
+  (state.impostorHistory || [])
+    .slice(0, IMPOSTOR_HISTORY_LIMIT)
+    .forEach((entry, historyIndex) => {
+      (entry.impostorIndexes || []).forEach((playerIndex) => {
+        penalties[playerIndex] += recencyWeights[historyIndex] || 0;
+      });
+    });
+
+  const candidateIndexes = Array.from({ length: total }, (_, i) => i);
+  const weights = penalties.map((penalty) => Math.max(MIN_FAIR_WEIGHT, 1 - penalty * IMPOSTOR_RECENT_PENALTY));
+  return sampleWeightedWithoutReplacement(candidateIndexes, weights, count);
 }
 
-function pickStartingPlayer(total) {
+function pickStartingPlayer(total, impostorIndexes = []) {
   if (total <= 0) return null;
-  const previous = state.impostorHistory?.[0]?.startPlayerIndex;
-  if (total === 1) return 0;
-  let candidate = Math.floor(Math.random() * total);
-  for (let attempt = 0; attempt < 5 && typeof previous === 'number' && candidate === previous; attempt += 1) {
-    candidate = Math.floor(Math.random() * total);
-  }
-  return candidate;
+  const previous = state.impostorHistory?.[0]?.startPlayerIndex ?? null;
+  const impostorSet = new Set(impostorIndexes);
+  const candidateIndexes = Array.from({ length: total }, (_, i) => i);
+  const weights = candidateIndexes.map((playerIndex) => {
+    let weight = impostorSet.has(playerIndex) ? STARTER_IMPOSTOR_WEIGHT : 1;
+    if (playerIndex === previous) {
+      weight *= STARTER_REPEAT_PENALTY;
+    }
+    return Math.max(MIN_FAIR_WEIGHT, weight);
+  });
+  return candidateIndexes[weightedRandomIndex(weights)];
 }
 
-function rememberImpostorSelection(impostorIndexes, startPlayerIndex) {
+function rememberImpostorSelection(impostorIndexes, startPlayerIndex, category) {
   const history = Array.isArray(state.impostorHistory) ? state.impostorHistory : [];
-  state.impostorHistory = [{ impostorIndexes, startPlayerIndex }, ...history].slice(0, 5);
+  state.impostorHistory = [{ impostorIndexes, startPlayerIndex }, ...history].slice(0, IMPOSTOR_HISTORY_LIMIT);
+
+  const categoryHistory = Array.isArray(state.categoryHistory) ? state.categoryHistory : [];
+  state.categoryHistory = [category, ...categoryHistory].slice(0, CATEGORY_HISTORY_LIMIT);
 }
 
 async function startGame() {
@@ -650,6 +707,7 @@ async function startGame() {
   state.selectedLevels = selectedLevels;
   state.selectedCategories = selectedCategories;
   state.impostorHistory = [];
+  state.categoryHistory = [];
   state.wordQueue = { key: '', queue: [] };
 
   const pool = buildWordPool();
@@ -660,7 +718,7 @@ async function startGame() {
 
   const { category, word } = drawNextWord();
   const impostorIndexes = pickImpostorsWithHistory(impostorCount, players.length);
-  const startPlayerIndex = pickStartingPlayer(players.length);
+  const startPlayerIndex = pickStartingPlayer(players.length, impostorIndexes);
 
   state = {
     players,
@@ -675,9 +733,10 @@ async function startGame() {
     startPlayerIndex,
     wordQueue: state.wordQueue,
     impostorHistory: state.impostorHistory,
+    categoryHistory: state.categoryHistory,
   };
 
-  rememberImpostorSelection(impostorIndexes, startPlayerIndex);
+  rememberImpostorSelection(impostorIndexes, startPlayerIndex, category);
   setupError.textContent = '';
   saveState();
   renderReveal();
@@ -819,7 +878,7 @@ function newRound() {
   }
   const { category, word } = selection;
   const impostorIndexes = pickImpostorsWithHistory(state.impostorCount, state.players.length);
-  const startPlayerIndex = pickStartingPlayer(state.players.length);
+  const startPlayerIndex = pickStartingPlayer(state.players.length, impostorIndexes);
   state = {
     ...state,
     category,
@@ -829,7 +888,7 @@ function newRound() {
     revealed: new Array(state.players.length).fill(false),
     wordQueue: state.wordQueue,
   };
-  rememberImpostorSelection(impostorIndexes, startPlayerIndex);
+  rememberImpostorSelection(impostorIndexes, startPlayerIndex, category);
   saveState();
   renderReveal();
 }
@@ -850,6 +909,7 @@ function hardReset() {
     startPlayerIndex: null,
     wordQueue: { key: '', queue: [] },
     impostorHistory: [],
+    categoryHistory: [],
   };
   playerInput.value = '';
   impostorInput.value = 1;
