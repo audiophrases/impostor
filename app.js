@@ -37,6 +37,9 @@ const appTitle = document.getElementById('appTitle');
 const setupTitle = document.getElementById('setupTitle');
 const playerNamesLabel = document.getElementById('playerNamesLabel');
 const wordBankLabel = document.getElementById('wordBankLabel');
+const gameModeLabel = document.getElementById('gameModeLabel');
+const modeClassicLabel = document.getElementById('modeClassicLabel');
+const modeBlindLabel = document.getElementById('modeBlindLabel');
 const languageLabel = document.getElementById('languageLabel');
 const levelsLabel = document.getElementById('levelsLabel');
 const levelsHint = document.getElementById('levelsHint');
@@ -57,6 +60,8 @@ let state = {
   impostorIndexes: [],
   category: '',
   word: '',
+  distractorWord: '',
+  gameMode: 'classic',
   revealed: [],
   language: 'en',
   selectedLevels: [],
@@ -73,6 +78,9 @@ const translations = {
     setupTitle: 'Setup',
     playerNamesLabel: 'Player names (one per line)',
     playerPlaceholder: 'Sam\nMina\nAlex',
+    gameModeLabel: 'Game mode',
+    modeClassicLabel: 'Classic',
+    modeBlindLabel: 'Blind',
     wordBankLabel: 'Word bank',
     languageLabel: 'Language',
     levelsLabel: 'Levels',
@@ -125,6 +133,9 @@ const translations = {
     setupTitle: 'Configuració',
     playerNamesLabel: 'Noms dels jugadors (un per línia)',
     playerPlaceholder: 'Sam\nMina\nAlex',
+    gameModeLabel: 'Mode de joc',
+    modeClassicLabel: 'Clàssic',
+    modeBlindLabel: 'Cec',
     wordBankLabel: 'Banc de paraules',
     languageLabel: 'Idioma',
     levelsLabel: 'Nivells',
@@ -177,6 +188,9 @@ const translations = {
     setupTitle: 'Configuration',
     playerNamesLabel: 'Noms des joueurs (un par ligne)',
     playerPlaceholder: 'Sam\nMina\nAlex',
+    gameModeLabel: 'Mode de jeu',
+    modeClassicLabel: 'Classique',
+    modeBlindLabel: 'Aveugle',
     wordBankLabel: 'Banque de mots',
     languageLabel: 'Langue',
     levelsLabel: 'Niveaux',
@@ -246,6 +260,9 @@ function applyTranslations() {
   setupTitle.textContent = t('setupTitle');
   playerNamesLabel.textContent = t('playerNamesLabel');
   playerInput.placeholder = t('playerPlaceholder');
+  if (gameModeLabel) gameModeLabel.textContent = t('gameModeLabel');
+  if (modeClassicLabel) modeClassicLabel.textContent = t('modeClassicLabel');
+  if (modeBlindLabel) modeBlindLabel.textContent = t('modeBlindLabel');
   wordBankLabel.textContent = t('wordBankLabel');
   languageLabel.textContent = t('languageLabel');
   levelsLabel.textContent = t('levelsLabel');
@@ -437,6 +454,7 @@ function loadState() {
       state = {
         ...state,
         ...parsed,
+        gameMode: parsed.gameMode || 'classic',
         language: parsed.language || state.language,
         selectedLevels: parsed.selectedLevels || [],
         selectedCategories: parsed.selectedCategories || [],
@@ -448,6 +466,8 @@ function loadState() {
 
       impostorInput.value = state.impostorCount || 1;
       playerInput.value = state.players.join('\n');
+      const modeRadio = document.querySelector(`input[name="gameMode"][value="${state.gameMode}"]`);
+      if (modeRadio) modeRadio.checked = true;
       shouldResumeReveal = state.players.length > 0;
     }
   } catch (err) {
@@ -531,8 +551,10 @@ function buildWordPool() {
     state.selectedCategories.forEach((category) => {
       const words = levelBank[category];
       if (!words || !words.length) return;
-      words.forEach((word) => {
-        pool.push({ category, word });
+      words.forEach((item) => {
+        const w = typeof item === 'string' ? item : item.word;
+        const distractors = item.distractors || [];
+        pool.push({ category, word: w, distractors });
       });
     });
   });
@@ -666,6 +688,8 @@ async function startGame() {
   const players = parseNames(playerInput.value);
   const impostorCount = Number(impostorInput.value);
   const language = languageSelect.value;
+  const selectedModeRadio = document.querySelector('input[name="gameMode"]:checked');
+  const gameMode = selectedModeRadio ? selectedModeRadio.value : 'classic';
 
   try {
     await refreshWordBank();
@@ -704,6 +728,7 @@ async function startGame() {
   }
 
   state.language = language;
+  state.gameMode = gameMode;
   state.selectedLevels = selectedLevels;
   state.selectedCategories = selectedCategories;
   state.impostorHistory = [];
@@ -716,7 +741,23 @@ async function startGame() {
     return;
   }
 
-  const { category, word } = drawNextWord();
+  const selection = drawNextWord();
+  const { category, word } = selection;
+  
+  let distractorWord = '';
+  if (gameMode === 'blind') {
+    if (selection.distractors && selection.distractors.length > 0) {
+      distractorWord = selection.distractors[Math.floor(Math.random() * selection.distractors.length)];
+    } else {
+      const categoryWords = pool.filter(w => w.category === selection.category && w.word !== selection.word);
+      if (categoryWords.length > 0) {
+        distractorWord = categoryWords[Math.floor(Math.random() * categoryWords.length)].word;
+      } else {
+        distractorWord = selection.word;
+      }
+    }
+  }
+
   const impostorIndexes = pickImpostorsWithHistory(impostorCount, players.length);
   const startPlayerIndex = pickStartingPlayer(players.length, impostorIndexes);
 
@@ -726,8 +767,10 @@ async function startGame() {
     impostorIndexes,
     category,
     word,
+    distractorWord,
     revealed: new Array(players.length).fill(false),
     language,
+    gameMode,
     selectedLevels,
     selectedCategories,
     startPlayerIndex,
@@ -820,20 +863,27 @@ function showResult() {
   const body = document.createElement('div');
   body.className = 'reveal-results';
 
-  const role = document.createElement('p');
-  role.textContent = isImpostor ? t('impostorYes') : t('impostorNo');
-  role.className = 'role-callout';
-  body.appendChild(role);
+  if (state.gameMode === 'classic') {
+    const role = document.createElement('p');
+    role.textContent = isImpostor ? t('impostorYes') : t('impostorNo');
+    role.className = 'role-callout';
+    body.appendChild(role);
+  }
 
   const category = document.createElement('p');
   category.className = 'secret-highlight';
   category.innerHTML = `<span class="secret-label">${t('categoryLabel')}</span><span class="secret-value category-value">${state.category}</span>`;
   body.appendChild(category);
 
-  if (!isImpostor) {
+  if (state.gameMode === 'classic' && !isImpostor) {
     const word = document.createElement('p');
     word.className = 'secret-highlight';
     word.innerHTML = `<span class="secret-label">${t('secretWordLabel')}</span><span class="secret-value word-value">${state.word}</span>`;
+    body.appendChild(word);
+  } else if (state.gameMode === 'blind') {
+    const word = document.createElement('p');
+    word.className = 'secret-highlight';
+    word.innerHTML = `<span class="secret-label">${t('secretWordLabel')}</span><span class="secret-value word-value">${isImpostor ? state.distractorWord : state.word}</span>`;
     body.appendChild(word);
   }
 
@@ -877,12 +927,28 @@ function newRound() {
     return;
   }
   const { category, word } = selection;
+  
+  let distractorWord = '';
+  if (state.gameMode === 'blind') {
+    if (selection.distractors && selection.distractors.length > 0) {
+      distractorWord = selection.distractors[Math.floor(Math.random() * selection.distractors.length)];
+    } else {
+      const pool = buildWordPool();
+      const categoryWords = pool.filter(w => w.category === selection.category && w.word !== selection.word);
+      if (categoryWords.length > 0) {
+        distractorWord = categoryWords[Math.floor(Math.random() * categoryWords.length)].word;
+      } else {
+        distractorWord = selection.word;
+      }
+    }
+  }
   const impostorIndexes = pickImpostorsWithHistory(state.impostorCount, state.players.length);
   const startPlayerIndex = pickStartingPlayer(state.players.length, impostorIndexes);
   state = {
     ...state,
     category,
     word,
+    distractorWord,
     impostorIndexes,
     startPlayerIndex,
     revealed: new Array(state.players.length).fill(false),
@@ -902,6 +968,8 @@ function hardReset() {
     impostorIndexes: [],
     category: '',
     word: '',
+    distractorWord: '',
+    gameMode: 'classic',
     revealed: [],
     language: 'en',
     selectedLevels: [],

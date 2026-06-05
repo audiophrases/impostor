@@ -22,6 +22,20 @@
 
       <div class="field-group">
         <div class="field-heading">
+          <span class="field-label" id="gameModeLabel">Game mode</span>
+        </div>
+        <div class="radio-group" id="gameModeRadios" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+          <label class="radio-label">
+            <input type="radio" name="gameMode" value="classic" checked />
+            <span id="modeClassicLabel">Classic</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="gameMode" value="blind" />
+            <span id="modeBlindLabel">Blind</span>
+          </label>
+        </div>
+
+        <div class="field-heading">
           <span class="field-label" id="wordBankLabel">Word bank</span>
           <span id="wordSourceStatus" class="hint"></span>
         </div>

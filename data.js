@@ -65,6 +65,7 @@ export async function fetchWordBank() {
   const levelIdx = headers.findIndex((h) => h.startsWith('level') || h === 'cefr');
   const categoryIdx = headers.findIndex((h) => h.startsWith('category'));
   const wordIdx = headers.findIndex((h) => h === 'word' || h === 'words');
+  const distractorIdx = headers.findIndex((h) => h.startsWith('distractor'));
 
   if ([languageIdx, levelIdx, categoryIdx, wordIdx].some((idx) => idx === -1)) {
     throw new Error('The sheet must include language, level, category, and word columns.');
@@ -77,14 +78,17 @@ export async function fetchWordBank() {
     const level = (cells[levelIdx] || '').trim();
     const category = (cells[categoryIdx] || '').trim();
     const word = (cells[wordIdx] || '').trim();
+    const distractorsRaw = distractorIdx >= 0 ? (cells[distractorIdx] || '').trim() : '';
 
     if (!language || !level || !category || !word) return;
+
+    const distractors = distractorsRaw.split(',').map(d => d.trim()).filter(Boolean);
 
     if (!bank[language]) bank[language] = {};
     if (!bank[language][level]) bank[language][level] = {};
     if (!bank[language][level][category]) bank[language][level][category] = [];
 
-    bank[language][level][category].push(word);
+    bank[language][level][category].push({ word, distractors });
   });
 
   if (!Object.keys(bank).length) {
