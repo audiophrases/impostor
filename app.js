@@ -127,6 +127,15 @@ const translations = {
     loadingWords: 'Loading latest words...',
     loadedWords: 'Loaded from shared sheet',
     unableToLoadWords: 'Unable to load words',
+    clickForDefinition: 'Tap for definition / translation',
+    dictTitle: 'Word Help',
+    dictTranslation: 'Translation',
+    dictDefinition: 'Definition',
+    dictSynonyms: 'Synonyms',
+    dictExamples: 'Examples',
+    dictNoResults: 'No information found online.',
+    dictLoading: 'Looking up word...',
+    dictError: 'Could not load word info.',
   },
   ca: {
     appTitle: "Joc de l'Impostor",
@@ -182,6 +191,15 @@ const translations = {
     loadingWords: 'Carregant les paraules més recents...',
     loadedWords: 'Carregades des del full compartit',
     unableToLoadWords: 'No s’han pogut carregar les paraules',
+    clickForDefinition: 'Toca per veure la definició / traducció',
+    dictTitle: 'Ajuda amb la paraula',
+    dictTranslation: 'Traducció',
+    dictDefinition: 'Definició',
+    dictSynonyms: 'Sinònims',
+    dictExamples: 'Exemples',
+    dictNoResults: 'No s’ha trobat informació en línia.',
+    dictLoading: 'Cercant la paraula...',
+    dictError: 'No s’ha pogut carregar la informació.',
   },
   fr: {
     appTitle: "Jeu de l'Imposteur",
@@ -238,6 +256,15 @@ const translations = {
     loadingWords: 'Chargement des derniers mots...',
     loadedWords: 'Chargés depuis la feuille partagée',
     unableToLoadWords: 'Impossible de charger les mots',
+    clickForDefinition: 'Appuyez pour la définition / traduction',
+    dictTitle: 'Aide pour le mot',
+    dictTranslation: 'Traduction',
+    dictDefinition: 'Définition',
+    dictSynonyms: 'Synonymes',
+    dictExamples: 'Exemples',
+    dictNoResults: 'Aucune information trouvée en ligne.',
+    dictLoading: 'Recherche du mot...',
+    dictError: 'Impossible de charger les informations.',
   },
 };
 
@@ -878,12 +905,13 @@ function showResult() {
   if (state.gameMode === 'classic' && !isImpostor) {
     const word = document.createElement('p');
     word.className = 'secret-highlight';
-    word.innerHTML = `<span class="secret-label">${t('secretWordLabel')}</span><span class="secret-value word-value">${state.word}</span>`;
+    word.innerHTML = `<span class="secret-label">${t('secretWordLabel')}</span><span class="secret-value word-value dictionary-link" data-word="${state.word}" data-lang="${state.language}" title="${t('clickForDefinition')}">${state.word}</span>`;
     body.appendChild(word);
   } else if (state.gameMode === 'blind') {
     const word = document.createElement('p');
     word.className = 'secret-highlight';
-    word.innerHTML = `<span class="secret-label">${t('secretWordLabel')}</span><span class="secret-value word-value">${isImpostor ? state.distractorWord : state.word}</span>`;
+    const actualWord = isImpostor ? state.distractorWord : state.word;
+    word.innerHTML = `<span class="secret-label">${t('secretWordLabel')}</span><span class="secret-value word-value dictionary-link" data-word="${actualWord}" data-lang="${state.language}" title="${t('clickForDefinition')}">${actualWord}</span>`;
     body.appendChild(word);
   }
 
@@ -1125,9 +1153,189 @@ modal.addEventListener('click', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    closeModal();
+    if (!dictModal.classList.contains('hidden')) {
+      closeDictOverlay();
+    } else {
+      closeModal();
+    }
   }
 });
+
+// ─── Dictionary overlay ────────────────────────────────────────────
+const dictModal = document.getElementById('dictModal');
+const dictTitle = document.getElementById('dictTitle');
+const dictContent = document.getElementById('dictContent');
+const dictFallbackLink = document.getElementById('dictFallbackLink');
+const closeDictButton = document.getElementById('closeDictButton');
+
+function openDictOverlay(word, lang) {
+  dictTitle.textContent = `${t('dictTitle')}: ${word}`;
+  dictContent.innerHTML = `<p class="dict-loading-text">${t('dictLoading')}</p>`;
+  const safeWord = encodeURIComponent(word);
+  dictFallbackLink.href = `https://translate.google.com/?sl=${lang}&text=${safeWord}&op=translate`;
+  dictModal.classList.remove('hidden');
+  fetchWordInfo(word, lang);
+}
+
+function closeDictOverlay() {
+  dictModal.classList.add('hidden');
+  dictContent.innerHTML = '';
+}
+
+closeDictButton.addEventListener('click', closeDictOverlay);
+dictModal.addEventListener('click', (e) => {
+  if (e.target === dictModal) closeDictOverlay();
+});
+
+// Delegate click from .dictionary-link inside the modal body
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('.dictionary-link');
+  if (!link) return;
+  e.preventDefault();
+  const word = link.dataset.word;
+  const lang = link.dataset.lang;
+  if (word && lang) openDictOverlay(word, lang);
+});
+
+// Determine user's browser language for translation target
+function getBrowserLang() {
+  return (navigator.language || 'en').split('-')[0];
+}
+
+async function fetchWordInfo(word, lang) {
+  const sections = [];
+  const targetLang = getBrowserLang();
+
+  // 1. Translation via MyMemory
+  if (lang !== targetLang) {
+    try {
+      const res = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=${lang}|${targetLang}`
+      );
+      const data = await res.json();
+      if (data.responseStatus === 200 && data.responseData?.translatedText) {
+        const translated = data.responseData.translatedText;
+        if (translated.toLowerCase() !== word.toLowerCase()) {
+          sections.push({ label: t('dictTranslation'), type: 'translation', value: translated });
+        }
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  // 2. Definition + synonyms via Free Dictionary API
+  try {
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/${lang}/${encodeURIComponent(word)}`);
+    if (res.ok) {
+      const entries = await res.json();
+      if (Array.isArray(entries) && entries.length) {
+        const entry = entries[0];
+        const defs = [];
+        const syns = new Set();
+        const examples = [];
+        (entry.meanings || []).forEach((m) => {
+          const pos = m.partOfSpeech || '';
+          (m.definitions || []).slice(0, 2).forEach((d) => {
+            defs.push({ pos, text: d.definition });
+            if (d.example) examples.push(d.example);
+          });
+          (m.synonyms || []).slice(0, 5).forEach((s) => syns.add(s));
+        });
+        if (defs.length) sections.push({ label: t('dictDefinition'), type: 'definitions', items: defs });
+        if (syns.size) sections.push({ label: t('dictSynonyms'), type: 'synonyms', items: Array.from(syns).slice(0, 8) });
+        if (examples.length) sections.push({ label: t('dictExamples'), type: 'examples', items: examples.slice(0, 3) });
+      }
+    }
+  } catch (_) { /* ignore */ }
+
+  // 3. Fallback: if no definition found and not English, try English definition via translation
+  if (!sections.some(s => s.type === 'definitions') && lang !== 'en') {
+    try {
+      const enTranslation = sections.find(s => s.type === 'translation');
+      const enWord = (targetLang === 'en' && enTranslation) ? enTranslation.value : null;
+      if (enWord) {
+        const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(enWord)}`);
+        if (res.ok) {
+          const entries = await res.json();
+          if (Array.isArray(entries) && entries.length) {
+            const defs = [];
+            const syns = new Set();
+            (entries[0].meanings || []).forEach((m) => {
+              (m.definitions || []).slice(0, 2).forEach((d) => {
+                defs.push({ pos: m.partOfSpeech || '', text: d.definition });
+              });
+              (m.synonyms || []).slice(0, 5).forEach((s) => syns.add(s));
+            });
+            if (defs.length) sections.push({ label: t('dictDefinition'), type: 'definitions', items: defs });
+            if (syns.size && !sections.some(s => s.type === 'synonyms')) {
+              sections.push({ label: t('dictSynonyms'), type: 'synonyms', items: Array.from(syns).slice(0, 8) });
+            }
+          }
+        }
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  renderDictContent(sections);
+}
+
+function renderDictContent(sections) {
+  if (!sections.length) {
+    dictContent.innerHTML = `<p class="dict-empty">${t('dictNoResults')}</p>`;
+    return;
+  }
+  dictContent.innerHTML = '';
+
+  sections.forEach((section) => {
+    const block = document.createElement('div');
+    block.className = 'dict-section';
+
+    const heading = document.createElement('h4');
+    heading.className = 'dict-section-label';
+    heading.textContent = section.label;
+    block.appendChild(heading);
+
+    if (section.type === 'translation') {
+      const val = document.createElement('p');
+      val.className = 'dict-translation-value';
+      val.textContent = section.value;
+      block.appendChild(val);
+    } else if (section.type === 'definitions') {
+      const list = document.createElement('ul');
+      list.className = 'dict-def-list';
+      section.items.forEach((d) => {
+        const li = document.createElement('li');
+        if (d.pos) {
+          const badge = document.createElement('span');
+          badge.className = 'dict-pos-badge';
+          badge.textContent = d.pos;
+          li.appendChild(badge);
+        }
+        li.appendChild(document.createTextNode(' ' + d.text));
+        list.appendChild(li);
+      });
+      block.appendChild(list);
+    } else if (section.type === 'synonyms') {
+      const pills = document.createElement('div');
+      pills.className = 'dict-syn-pills';
+      section.items.forEach((s) => {
+        const pill = document.createElement('span');
+        pill.className = 'dict-syn-pill';
+        pill.textContent = s;
+        pills.appendChild(pill);
+      });
+      block.appendChild(pills);
+    } else if (section.type === 'examples') {
+      section.items.forEach((ex) => {
+        const q = document.createElement('blockquote');
+        q.className = 'dict-example';
+        q.textContent = `"${ex}"`;
+        block.appendChild(q);
+      });
+    }
+
+    dictContent.appendChild(block);
+  });
+}
 
 loadState();
 ensureInitialLanguageOption();

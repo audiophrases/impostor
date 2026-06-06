@@ -129,6 +129,21 @@
     </div>
   </div>
 
+  <div id="dictModal" class="dict-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="dictTitle">
+    <div class="dict-panel">
+      <div class="dict-header">
+        <h3 id="dictTitle"></h3>
+        <button id="closeDictButton" type="button" class="ghost dict-close">✕</button>
+      </div>
+      <div id="dictContent" class="dict-content">
+        <p class="dict-loading">Loading…</p>
+      </div>
+      <div class="dict-footer">
+        <a id="dictFallbackLink" href="#" target="_blank" rel="noopener noreferrer" class="dict-ext-link">Open in Google Translate ↗</a>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="data.js"></script>
   <script type="module" src="app.js"></script>
 </body>
